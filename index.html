@@ -260,6 +260,38 @@ button:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-wit
 .data-table .mini-val { display:inline-block; width:46px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:0.85rem; color: var(--c-pace); font-variant-numeric: tabular-nums; text-align:right; }
 .whatif-note { font-size:0.85rem; color: var(--muted); margin-top:0.5rem; }
 
+/* ─── REPORT BUILDER ─── */
+.report-form textarea { padding:0.6rem 0.8rem; border:2px solid var(--light-gray); border-radius:6px; font-family:'Source Sans 3',sans-serif; font-size:1rem; background: var(--input-bg); color: var(--text); width:100%; min-height:80px; resize: vertical; }
+.report-form textarea:focus { outline:none; border-color: var(--steel-blue); box-shadow:0 0 0 3px rgba(75,124,155,0.15); }
+.report { border:1px solid var(--border); border-radius:10px; background: var(--card); padding:1.5rem; margin-top:1rem; }
+.report-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; border-bottom:3px solid var(--usa-red); padding-bottom:0.8rem; margin-bottom:1rem; }
+.report-head h3 { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; letter-spacing:2px; color: var(--c-pace); line-height:1.05; }
+.report-head .meta { font-family:'Barlow Condensed',sans-serif; font-size:0.95rem; color: var(--muted); }
+.report-part { margin-top:1.4rem; }
+.report-part h4 { font-family:'Bebas Neue',sans-serif; font-size:1.35rem; letter-spacing:1.5px; color: var(--c-pace); border-left:4px solid var(--usa-red); padding-left:0.6rem; margin-bottom:0.6rem; }
+.report-part h5 { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px; color: var(--c-pace); margin:0.9rem 0 0.3rem; }
+.report p { font-size:0.92rem; line-height:1.55; margin-bottom:0.5rem; max-width: 75ch; }
+.report .data-table { font-size:0.82rem; }
+.priority-list { display:grid; gap:0.6rem; margin-top:0.5rem; }
+.priority-item { display:grid; grid-template-columns: 40px 1fr; gap:0.7rem; align-items:start; background: var(--soft); border-radius:8px; padding:0.7rem 0.9rem; border-left:4px solid var(--steel-blue); }
+.priority-item.alert { border-left-color: var(--usa-red); }
+.priority-item.warn { border-left-color: var(--warn); }
+.priority-item.good { border-left-color: var(--good); }
+.priority-num { font-family:'Bebas Neue',sans-serif; font-size:1.6rem; color: var(--c-pace); line-height:1; }
+.priority-item b { font-family:'Barlow Condensed',sans-serif; font-size:1rem; color: var(--c-pace); }
+.session-card { border:1px solid var(--border); border-radius:8px; padding:0.9rem 1.1rem; margin-top:0.7rem; background: var(--card); break-inside: avoid; }
+.session-card .s-title { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:1.05rem; color: var(--c-pace); }
+.session-card .s-tag { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px; background: rgba(75,124,155,0.15); color: var(--c-pace); border-radius:999px; padding:0.1rem 0.6rem; margin-left:0.4rem; vertical-align: middle; }
+.session-card .s-row { font-size:0.88rem; line-height:1.5; margin-top:0.3rem; }
+.session-card .s-row b { font-family:'Barlow Condensed',sans-serif; color: var(--c-pace); }
+.session-card .s-src { font-size:0.75rem; color: var(--muted); font-style: italic; margin-top:0.4rem; }
+.report-actions { display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; margin-top:1rem; }
+body.print-report-only .section-card:not(#sec-report), body.print-report-only .print-bar, body.print-report-only .hero .theme-toggle { display:none !important; }
+body.print-report-only #sec-report .section-header, body.print-report-only #sec-report .report-form, body.print-report-only #sec-report .report-actions, body.print-report-only #sec-report .info-callout.rb-intro { display:none !important; }
+body.print-report-only #sec-report { border:none; box-shadow:none; }
+body.print-report-only #sec-report .report { border:none; padding:0; }
+@media print { .report-part { page-break-inside: auto; } .report-part h4 { page-break-after: avoid; } .priority-item, .session-card { page-break-inside: avoid; } }
+
 /* ─── THEME TOGGLE ─── */
 .theme-toggle {
   position: absolute; top: 0.9rem; right: 0.9rem; z-index: 2;
@@ -620,6 +652,39 @@ button:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-wit
       <div class="result-grid" id="wi-tiles" style="margin-bottom:1rem;"></div>
       <div class="table-wrap"><table class="data-table" id="wi-table"></table></div>
       <div class="whatif-note">Stride length and stride rate values are shown when they were tracked. The pace and time math works either way, because the sliders scale speed directly.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SECTION 7: ATHLETE REPORT ═══════════════ -->
+  <div class="section-card" id="sec-report" style="display:none;">
+    <div class="section-header" onclick="toggleSection('report')">
+      <span class="step-badge">7</span>
+      <h2>Build the Athlete Report</h2>
+      <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="section-body" id="body-report">
+      <div class="info-callout rb-intro">
+        <strong>What the report contains.</strong> Part 1 is the run as it happened: the data entered or read from the file, segment by segment, with the percent changes and the coach's read. Part 2 is the what-if: the cadence and stride length adjustments you selected above and what they do to pace and time. Part 3 turns the findings and the what-if choices into training priorities and specific sessions, pulled from the USA Triathlon coaching knowledge base (stored in Supabase, with a built-in copy if the connection is unavailable).
+      </div>
+      <div class="form-grid report-form">
+        <div class="form-group"><label>Athlete Name</label><input type="text" id="rp-athlete" placeholder="e.g. Jane Smith"></div>
+        <div class="form-group"><label>Run / Race</label><input type="text" id="rp-event" placeholder="e.g. 70.3 run leg, Boulder"></div>
+        <div class="form-group"><label>Date</label><input type="date" id="rp-date"></div>
+        <div class="form-group"><label>Coach</label><input type="text" id="rp-coach" value="Justin Trolle, USA Triathlon Level 3 Coach"></div>
+        <div class="form-group" style="grid-column: 1 / -1;"><label>Coach's Notes (optional)</label><textarea id="rp-notes" placeholder="Conditions, course, how the athlete felt, anything the numbers do not show."></textarea></div>
+      </div>
+      <div class="report-actions">
+        <button class="btn-calculate" onclick="buildReport()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 3h9l3 3v11H4z M7 9h6M7 12h6M7 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          BUILD REPORT
+        </button>
+        <button class="btn-print" id="rp-print" style="display:none;" onclick="printReport()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7V3h10v4M5 14H3V8h14v6h-2M6 12h8v5H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          PRINT REPORT
+        </button>
+        <span class="status-line" id="rp-status"></span>
+      </div>
+      <div class="report" id="report-out" style="display:none;"></div>
     </div>
   </div>
 
@@ -1234,6 +1299,8 @@ function analyze() {
   ['sec-results','sec-charts','sec-read'].forEach(id => document.getElementById(id).style.display = '');
   document.getElementById('print-bar').style.display = 'block';
   initWhatIf(D);
+  document.getElementById('sec-report').style.display = '';
+  document.getElementById('report-out').style.display = 'none'; document.getElementById('rp-print').style.display = 'none'; document.getElementById('rp-status').textContent = '';
   const schemeName = { whole:'Whole run', halves:'Halves', thirds:'Thirds', quarters:'Quarters', equal:`${D.length} equal segments`, custom:'Custom distances', laps:'Device laps' }[scheme] || scheme;
   document.getElementById('print-header').innerHTML = `<strong>Run analyzed:</strong> ${n(fromMeters(totalM,u),2)} ${u} in ${fmtTime(totalT)} · ${schemeName} · ${source==='fit' ? 'from .FIT file' : 'manual entry'} · ${new Date().toLocaleDateString()}`;
 }
@@ -1300,6 +1367,177 @@ function renderWhatIf() {
     <div class="result-box"><div class="result-label">Original Time</div><div class="result-value">${fmtTime(origTotal)}</div><div class="result-detail">${fmtPaceSec(origTotal/distU)} /${u} average</div></div>
     <div class="result-box ${saved > 0.5 ? 'good' : saved < -0.5 ? 'alert' : ''}"><div class="result-label">Adjusted Time</div><div class="result-value">${fmtTime(newTotal)}</div><div class="result-detail">${fmtPaceSec(newTotal/distU)} /${u} average</div></div>
     <div class="result-box ${saved > 0.5 ? 'good' : saved < -0.5 ? 'alert' : ''}"><div class="result-label">Time ${saved >= 0 ? 'Saved' : 'Added'}</div><div class="result-value">${fmtTime(Math.abs(saved))}</div><div class="result-detail">${f(totPct)} total time · ${f(origTotal/newTotal*100-100)} average speed</div></div>`;
+}
+
+// ═══════════════ ATHLETE REPORT ═══════════════
+const SUPA_URL = 'https://vzwpdsnxstazpfukdbak.supabase.co';
+const SUPA_KEY = 'sb_publishable_boHol6--f9_CgCSq1jyaSg_OuI42zyv';
+const TRAINING_LIBRARY_FALLBACK = [{"id": "pace_fade_strength_endurance", "finding_key": "pace_fade", "sort": 10, "title": "Strength endurance: hill repeat block", "what_the_data_shows": "Pace fell through the run by more than normal race fade. Pace lost late in a race is mostly a fatigue-resistance problem, not a speed problem.", "training_focus": "Strength endurance and fatigue resistance. Build the ability to hold pace when the legs are already tired.", "session_name": "5 x 1 km hill repeats (strength endurance)", "session_detail": "Find a steady climb that takes 3.5 to 4 minutes to run hard. 5 x 1 km up at a strong, controlled effort (Z4), focusing on forward lean, full hip extension and quick feet. Walk or jog back down and take the full 6 to 7 minutes before the next rep; strength endurance is muscular, and the legs will not recover faster by jogging harder. Compare rep times: the drop-off from rep 1 to rep 5 is the fatigue-resistance score to track across the season.", "progression": "Weeks 1-2: 4 reps. Weeks 3-4: 5 reps. Weeks 5-6: 5 reps with the last two at the pace of the first. Retest every 6 weeks and compare rep 1 to rep 5 drop-off.", "frequency": "Once a week in a strength endurance phase, every 10 to 14 days in race-specific phases.", "kb_source": "Running Field Tests: Hill Repeats for Strength Endurance Assessment"}, {"id": "pace_fade_long_run_finish", "finding_key": "pace_fade", "sort": 20, "title": "Progressive long run with a fast finish", "what_the_data_shows": "The second half ran slower than the first. The athlete needs practice finishing on the strongest mile rather than the weakest.", "training_focus": "Durability and pacing discipline: finish workouts with the strongest rep, mile or minute.", "session_name": "Progression long run, last 20 to 25% at goal race pace", "session_detail": "Long run at easy aerobic pace (Z2) for the first 60 to 70%, then build through Z3 so the final 20 to 25% is run at goal race pace with the last mile the fastest of the day. Hold stride length and cadence in the final section; if the watch shows stride length dropping, shorten the fast section next time rather than slowing down inside it.", "progression": "Start with the final 15% at race pace and add 5% of the run each fortnight up to 25 to 30%. For triathletes, do this as a brick off a steady bike once every 2 to 3 weeks.", "frequency": "Every second long run.", "kb_source": "Developing Pacing Discipline Through Training; Defining Run Durability Off the Bike in Triathlon"}, {"id": "pace_fade_pacing_discipline", "finding_key": "pace_fade", "sort": 30, "title": "Opening pace discipline", "what_the_data_shows": "A large first-to-last fade often starts with an opening segment that was too fast for current fitness.", "training_focus": "Pacing discipline: restraint early so the end of the run is the best part, not the worst.", "session_name": "Ceiling-capped tempo", "session_detail": "3 x 10 minutes at goal race pace with 2 minutes easy, with a hard ceiling: the athlete is not allowed to run faster than the target in reps 1 and 2 even when it feels easy. Rep 3 may be run freely. The point is learning to hold back when fresh, which is exactly the race-day skill that was missing. Enforce a slow, full warm-up for the same reason.", "progression": "Grow the reps toward 3 x 15 minutes, then 2 x 20 minutes, keeping the ceiling on every rep but the last.", "frequency": "Weekly in the 8 weeks before a goal race.", "kb_source": "Developing Pacing Discipline Through Training"}, {"id": "hr_decoupling_aerobic", "finding_key": "hr_decoupling", "sort": 10, "title": "Aerobic durability: long steady-state at LT1", "what_the_data_shows": "Heart rate climbed while pace fell. Speed per heartbeat (efficiency factor) dropped more than 5% across the run, which points to aerobic durability, heat, hydration or fueling rather than mechanics alone.", "training_focus": "Aerobic durability: extend the time the athlete can hold a given pace at a stable heart rate.", "session_name": "Long run with a 40 to 60 minute LT1 block", "session_detail": "After 20 to 30 minutes easy, run 40 to 60 minutes continuously at LT1 pace (top of Z2 / bottom of Z3) and record pace and HR for the first and second half of the block. The goal is decoupling under 5% between halves. Practice race-day fueling and fluids during the block; fueling and heat are the most common hidden causes of decoupling.", "progression": "Start at 30 minutes and add 10 minutes every two weeks to 60 to 75 minutes. Once decoupling is under 5% at 60 minutes, move the block up to Z3.", "frequency": "Weekly in base and build phases.", "kb_source": "Defining Run Durability Off the Bike in Triathlon; Heat Acclimatization for Run Durability"}, {"id": "hr_decoupling_brick", "finding_key": "hr_decoupling", "sort": 20, "title": "Bike-to-run durability brick", "what_the_data_shows": "For a triathlon run leg, HR drift usually begins on the bike. If the athlete runs more than 30 s (5K) or 1 min (10K) slower than standalone, the bike is the limiter.", "training_focus": "Protect the run by managing bike effort and fueling, then rehearse holding run pace on depleted legs.", "session_name": "Race-pace brick with capped bike", "session_detail": "60 to 90 minutes on the bike at goal race power or effort with a hard ceiling (no surges), fueling at race rate, then straight into a 20 to 40 minute run holding goal pace with HR monitored. Compare run HR and pace with the standalone run numbers. It is better to give up 1 to 2 minutes on the bike than lose 5 on the run.", "progression": "Lengthen the run portion toward 50 to 60% of race run distance over 6 weeks.", "frequency": "Every 2 to 3 weeks in race-specific phases.", "kb_source": "Bike-to-Run Performance: How Cycling Fitness Drives Run Execution; Bike Impact on Run Performance"}, {"id": "stride_length_loss_tire", "finding_key": "stride_length_loss", "sort": 10, "title": "Tire drag and tow-and-release for drive and hip extension", "what_the_data_shows": "Stride length shortened late in the run while cadence held. Each step got shorter: the classic fatigue pattern where hip extension and glute drive fade and the body comes upright.", "training_focus": "Forward drive, hip extension and glute activation under fatigue.", "session_name": "Tire drag progression (mobility, hills, flat tire, tow-and-release)", "session_detail": "Use a light tire attached at the torso, not the waist. 4 to 6 x 50 to 70 m tire drags focusing on chest forward, eyes down, elbows back and full drive extension behind the body, walk-back recovery. Then 4 x tow-and-release: coach holds the harness with light resistance, counts 3-2-1 and releases, athlete holds the forward position and cadence for 50 m. Finish with 4 to 6 x 80 m strides keeping the same shape.", "progression": "Session order over a block: mobility and hip flexor work, then hill work for strength and range, then flat tire work, then tow-and-release, then normal running at the maintained form.", "frequency": "Twice a week in a mechanics block, then once a week as part of the warm-up for quality sessions.", "kb_source": "Tire Drag Training: Setup, Attachment Method, and Biomechanical Benefits; Tire Work Progressions and Warm-Up Structure"}, {"id": "stride_length_loss_hip_chain", "finding_key": "stride_length_loss", "sort": 20, "title": "Hip flexor mobility and glute strength", "what_the_data_shows": "Shortening stride length with rising vertical oscillation late in the run is a sign of a restricted extension chain: tight hip flexors, under-recruited glutes, posture coming upright.", "training_focus": "Restore the extension chain so the glutes contribute at toe-off, especially for triathletes carrying bike volume.", "session_name": "Extension-chain strength and mobility (2 x 20 minutes)", "session_detail": "Post-bike hip flexor mobility (half-kneeling hip flexor stretch, dynamic leg swings, 3 x 45 s each side). Glute strength through full range: Romanian deadlift or single-leg RDL 3 x 6 to 8 heavy, rear-foot-elevated split squats 3 x 8 each side, hip thrusts 3 x 8 heavy. Finish with A-skips and straight-leg bounds to connect the strength to the running pattern.", "progression": "Weeks 1-3 movement quality and moderate loads; weeks 4-8 heavy loads (around 80% 1RM, low reps). Expect 1 to 4 weeks of extra fatigue while the new pattern settles in.", "frequency": "Twice a week, scheduled away from key run sessions.", "kb_source": "Hip Flexor Flexibility and Glute Activation: The Running Extension Chain; Strength Methods Compared: Heavy, Explosive, and Plyometric"}, {"id": "stride_length_loss_hills", "finding_key": "stride_length_loss", "sort": 30, "title": "Short hill repeats for drive and strength", "what_the_data_shows": "Stride length is the product of force applied in the right direction. Hills force forward lean and full extension and build the specific strength to hold stride length late.", "training_focus": "Strength and range of motion in the running pattern.", "session_name": "8 to 12 x 30 to 45 s hill repeats", "session_detail": "Moderate gradient (6 to 8%). 8 to 12 reps of 30 to 45 seconds at a strong effort with tall posture, forward lean from the ankles, knees driving and full push-off; walk down for full recovery. Form is the priority: stop the session when drive or posture breaks down.", "progression": "Start at 8 x 30 s. Add 2 reps or 5 s per fortnight to 12 x 45 s, then convert to the 5 x 1 km strength endurance block.", "frequency": "Once a week.", "kb_source": "Running Field Tests: Hill Repeats for Strength Endurance Assessment; Tire Work Progressions and Warm-Up Structure"}, {"id": "cadence_drop_neuromuscular", "finding_key": "cadence_drop", "sort": 10, "title": "Cadence under fatigue: neuromuscular rhythm work", "what_the_data_shows": "Stride rate fell late in the run. That is usually neuromuscular fatigue or loss of focus rather than a strength problem. A 4 rpm (8 strikes/min) rise at the same stride length is worth roughly a minute over 5 km.", "training_focus": "Hold stride rate when tired. Shorter, quicker steps late in a run protect pace and reduce braking.", "session_name": "Fatigued-state cadence intervals", "session_detail": "Inside the last third of a long or steady run: 6 to 8 x 2 minutes at target stride rate (current race stride rate + 3 to 5 strikes/min) with 1 minute at natural rhythm. Use the watch cadence field or a metronome. The pace does not need to change; the point is holding the rhythm when the legs want to slow it.", "progression": "Grow the intervals to 8 x 3 minutes, then run the whole final 20 minutes at target cadence.", "frequency": "Once a week, plus cadence cues in every easy run.", "kb_source": "Stride Length and Cadence: How the Two Speed Variables Interact"}, {"id": "cadence_drop_strides", "finding_key": "cadence_drop", "sort": 20, "title": "Strides and short speed for leg turnover", "what_the_data_shows": "Cadence dropped late; the athlete needs more leg speed in reserve so race cadence is a smaller fraction of maximum turnover.", "training_focus": "Neuromuscular speed and turnover.", "session_name": "Strides and 200s", "session_detail": "After an easy run: 6 to 8 x 20 s strides building to fast but relaxed, full walk-back. Once a week add 8 to 12 x 200 m at 5K pace minus 3 to 5 s with 200 m jog, counting steps for the first 100 m to keep turnover high. Full warm-up with drills, tire work and shuttle runs before the 200s.", "progression": "Strides every easy run; 200s from 8 to 12 reps over 4 weeks.", "frequency": "Strides 2 to 3 times a week, 200s once a week.", "kb_source": "Tire Work Progressions and Warm-Up Structure for High-Intensity Run Sessions"}, {"id": "gct_rise_plyo", "finding_key": "gct_rise", "sort": 10, "title": "Leg stiffness and reactive strength: plyometric progression", "what_the_data_shows": "Ground contact time lengthened through the run. Longer contacts mean less elastic return and more braking; the leg spring is softening under fatigue.", "training_focus": "Reactive strength and rate of force development so the leg returns energy quickly.", "session_name": "Plyometric progression (low to moderate volume)", "session_detail": "Week 1-2: pogo hops in place 3 x 20, ankle bounces, line hops. Week 3-4: add single-leg pogo 3 x 10 each side and low box jumps 3 x 5. Week 5-8: drop jumps from 20 to 30 cm 3 x 5 with the cue 'minimum ground time', bounding 3 x 30 m. Quality over quantity: stop when contacts get longer. Use a drop-jump RSI (jump height / contact time) as the readiness check; a clear drop from baseline means back off.", "progression": "60 to 100 contacts per session building to 120 to 150. Pair with heavy lifting, which the evidence favours for running economy; plyometrics add most at slower speeds.", "frequency": "Twice a week, 48 hours apart, before easy runs.", "kb_source": "Rate of Force Development and Reactive Strength Index; Running Mechanics: The Spring-Mass Model and Leg Stiffness; Strength Methods Compared"}, {"id": "gct_rise_heavy_strength", "finding_key": "gct_rise", "sort": 20, "title": "Heavy resistance training for economy", "what_the_data_shows": "Rising ground contact and falling flight phase late in a run respond best to heavy strength work combined with plyometrics.", "training_focus": "Maximal strength that converts to stiffer, quicker ground contacts.", "session_name": "Heavy lower-body lift (lift heavy stuff correctly)", "session_detail": "Back squat or trap-bar deadlift 4 x 4 to 6 at 80 to 85% 1RM, Bulgarian split squat 3 x 6 each side, calf raises (straight and bent knee) 3 x 8 heavy, finish with 3 x 5 pogo jumps. Full recovery between sets. Keep intensity high and volume low so run sessions are not compromised.", "progression": "Add load, not reps. 8 week block, then maintain with one session a week.", "frequency": "Twice a week in the off-season and base, once a week in race phases.", "kb_source": "Strength Methods Compared: Heavy, Explosive, and Plyometric; Strength Training for Masters Endurance Athletes"}, {"id": "vo_rise_tire", "finding_key": "vo_rise", "sort": 10, "title": "Reduce bounce: tire drag and forward drive", "what_the_data_shows": "Vertical oscillation (or vertical ratio) rose through the run. Every centimeter of bounce is energy spent fighting gravity and impact absorbed by the quads, which accelerates fatigue.", "training_focus": "Drive forward, not up. Tire drag makes it mechanically impossible to run with excessive vertical oscillation.", "session_name": "Tire drag session with vertical ratio feedback", "session_detail": "6 x 60 m tire drags (torso attachment, light tire) with full extension and chest forward, then 4 x tow-and-release, then 6 x 100 m free running trying to hold the same shape. Have the athlete add Vertical Oscillation Ratio (%) as a watch field so they get real-time feedback in the free-running reps and in their next easy runs.", "progression": "Aim to bring vertical ratio toward the 5 to 7.5% range. Track VOR on the same easy loop every two weeks.", "frequency": "Twice a week in a mechanics block.", "kb_source": "Vertical Oscillation Analysis: Impact on Running Efficiency and Fatigue; Running Gait Analysis: Key Video Metrics and Benchmark Targets; Tire Drag Training"}, {"id": "vo_rise_video", "finding_key": "vo_rise", "sort": 20, "title": "Biomechanical decoupling test on video", "what_the_data_shows": "Rising bounce under fatigue usually comes with posture rising upright and hip extension shortening. Video shows exactly which pace the form breaks at.", "training_focus": "Identify the breakdown pace and coach the specific fault (posture, extension, arm carriage).", "session_name": "Progressive-pace video session on the track", "session_detail": "Camera 10 m to the side. Each lap: 250 m easy then 150 to 200 m at a set pace, starting at 8:00/mi and dropping 30 s per rep until the athlete cannot hold it. Film every rep. Measure vertical rise at the hip (shoe length as the scale), forward lean, extension angle and arm carriage, and note the pace where each one deteriorates. Retest every 8 weeks.", "progression": "Prescribe the mechanics work from the first fault to appear, then retest for a higher breakdown pace.", "frequency": "Every 8 weeks.", "kb_source": "Running Video Analysis: Biomechanical Decoupling Test Protocol; Running Gait Analysis: Key Video Metrics and Benchmark Targets"}, {"id": "flight_drop_spring", "finding_key": "flight_drop", "sort": 10, "title": "Restore the flight phase: hills plus plyometrics", "what_the_data_shows": "Flight phase fell as the run went on, so less of each stride was spent in the air. Elite runners keep contact times near 190 to 200 ms even uphill; the goal is to keep the spring stiff when tired.", "training_focus": "Elastic running under fatigue.", "session_name": "Hill sprints then flat strides", "session_detail": "6 to 8 x 10 to 12 s hill sprints at near-maximal effort on a steep hill (8 to 10%), full 2 to 3 minute recovery, followed by 6 x 80 m flat strides with the cue 'quick off the ground'. Do this fresh, before the main run, so the quality is high.", "progression": "Build from 6 x 8 s to 8 x 12 s over 6 weeks; pair with the plyometric progression.", "frequency": "Once a week.", "kb_source": "Running Mechanics Analysis: Stride Length, Rate, and Oscillation Metrics; Running Mechanics: The Spring-Mass Model and Leg Stiffness"}, {"id": "power_drop_output", "finding_key": "power_drop", "sort": 10, "title": "Power fell with pace: output, not efficiency", "what_the_data_shows": "Power and pace dropped together, so the athlete produced less rather than becoming less efficient. This is a durability and fueling problem first.", "training_focus": "Muscular endurance and fueling so power can be held for the full run.", "session_name": "Power-capped long intervals", "session_detail": "4 x 12 to 15 minutes at goal race power with 3 minutes easy, holding power within a 3% band, fueling 60 to 90 g carbohydrate per hour. Watch for the pace-at-power to stay steady across reps.", "progression": "Toward 3 x 20 minutes, then a continuous 45 to 60 minutes at race power.", "frequency": "Weekly in race-specific phases.", "kb_source": "Running Power Meters: Estimated, Useful, But Not Interchangeable With Cycling; Defining Run Durability Off the Bike"}, {"id": "re_drop_efficiency", "finding_key": "re_drop", "sort": 10, "title": "Pace fell at the same power: form cost rose", "what_the_data_shows": "Running effectiveness (speed per W/kg) dropped, so each watt bought less speed late in the run. Mechanics, not output, are the limiter.", "training_focus": "Mechanics under fatigue: stride length, vertical ratio and ground contact.", "session_name": "Fatigued-state mechanics reps", "session_detail": "Inside the final 20 minutes of a steady run: 5 x 1 minute at race pace with the watch showing power and pace, cueing forward lean and quick contacts; 1 minute easy between. Compare running effectiveness in the reps with the fresh value from the first 10 minutes.", "progression": "Combine with the tire drag and plyometric sessions listed for stride length and ground contact.", "frequency": "Once a week.", "kb_source": "Running Power Meters: Estimated, Useful, But Not Interchangeable With Cycling; Biomechanics: Run Efficiency and Durability"}, {"id": "whatif_cadence_plan", "finding_key": "whatif_cadence", "sort": 10, "title": "Reaching the cadence target from the what-if", "what_the_data_shows": "The what-if raised cadence. Small cadence changes are realistic: +4 rpm (+8 strikes/min) at the same stride length is roughly 7 to 8 m per minute, about a minute over 5 km.", "training_focus": "Make the new stride rate the default rhythm, first fresh, then under fatigue.", "session_name": "Cadence adoption ladder", "session_detail": "Week 1-2: set a watch cadence alert at current + 2 to 3 strikes/min for all easy runs. Week 3-4: raise it to the what-if target for the first half of easy runs and the strides. Week 5-6: hold the target through the last third of the long run (fatigued-state cadence intervals). Keep stride length from collapsing: if pace drops at the new cadence, back off 1 to 2 strikes/min.", "progression": "Do not jump more than 5% in one block; neuromuscular changes need 1 to 4 weeks of extra fatigue allowance.", "frequency": "Built into every run for 6 weeks.", "kb_source": "Stride Length and Cadence: How the Two Speed Variables Interact; Managing Fatigue When Transitioning Athletes to New Running Mechanics"}, {"id": "whatif_stride_plan", "finding_key": "whatif_stride", "sort": 10, "title": "Earning the stride length from the what-if", "what_the_data_shows": "The what-if lengthened the stride. Stride length is earned through hip extension, drive direction and strength, never by reaching the foot out in front (overstriding adds braking and contact time).", "training_focus": "Hip extension, forward drive, strength and elasticity; stride length then lengthens behind the body.", "session_name": "Stride length block (tire, hills, heavy strength)", "session_detail": "Weekly: one tire drag and tow-and-release session, one short hill repeat session, two heavy strength sessions with hip flexor mobility, strides after easy runs. Measure stride length on the same easy loop at the same pace every two weeks; the number should rise with cadence unchanged.", "progression": "8 week block. Expect the first 2 to 3 weeks to feel harder as the glutes take over the drive.", "frequency": "As listed, inside a normal week.", "kb_source": "Hip Flexor Flexibility and Glute Activation; Tire Drag Training; Strength Methods Compared"}, {"id": "well_held_maintain", "finding_key": "well_held", "sort": 10, "title": "Mechanics and pacing held: raise the ceiling", "what_the_data_shows": "Pace, heart rate and mechanics stayed together through the run. Durability is not the limiter right now, so the next gains come from a higher ceiling and more specific race preparation.", "training_focus": "Speed endurance and race-specific intensity while keeping the mechanics work in the warm-ups.", "session_name": "Speed endurance set", "session_detail": "Full 25 to 30 minute warm-up (easy jog, dynamic mobility, 2 to 4 tire drags, shuttle runs). Main set: 5 to 8 x 1000 m at 5K goal pace with 2 minutes jog, or 4 to 5 x 1600 m at the 4 x 1600 test pace. Finish with the strongest rep.", "progression": "Use the Run Pace Calculator's speed and speed endurance table for the rep targets and progress distance before pace.", "frequency": "Once a week.", "kb_source": "Running as Race Determinant: Elite-Level Exercise Prescription; Tire Work Progressions and Warm-Up Structure"}];
+let trainingLibrary = null, trainingLibrarySource = '';
+async function loadTrainingLibrary() {
+  if (trainingLibrary) return trainingLibrary;
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(`${SUPA_URL}/rest/v1/run_analyzer_training_library?select=*&active=eq.true&order=finding_key,sort`, { headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY }, signal: ctrl.signal });
+    clearTimeout(t);
+    if (r.ok) { const rows = await r.json(); if (Array.isArray(rows) && rows.length) { trainingLibrary = rows; trainingLibrarySource = 'Supabase training library (' + rows.length + ' sessions)'; return rows; } }
+  } catch (e) {}
+  trainingLibrary = TRAINING_LIBRARY_FALLBACK; trainingLibrarySource = 'built-in training library (Supabase not reachable)';
+  return trainingLibrary;
+}
+// Work out the findings from the analysed segments. Each finding: key, severity (alert/warn/good), headline, evidence
+function deriveFindings(D) {
+  const F = [];
+  if (D.length < 2) return F;
+  const first = D[0], last = D[D.length-1];
+  const speedP = pct(last.mph, first.mph);
+  const hrP = metrics.hr ? pct(last.hr, first.hr) : null;
+  const efP = metrics.hr && first.ef && last.ef ? pct(last.ef, first.ef) : null;
+  const srP = metrics.cad ? pct(last.sr, first.sr) : null;
+  const slP = metrics.sl ? pct(last.slCm, first.slCm) : null;
+  const gctP = metrics.gct ? pct(last.gct, first.gct) : null;
+  const voP = metrics.vo ? pct(last.voCm, first.voCm) : null;
+  const vorP = metrics.vor ? pct(last.vor, first.vor) : null;
+  const flP = metrics.flight ? pct(last.flightPct, first.flightPct) : null;
+  const powP = metrics.pow ? pct(last.pow, first.pow) : null;
+  const reP = metrics.pow && first.re && last.re ? pct(last.re, first.re) : null;
+  const add = (key, sev, score, headline, evidence) => F.push({ key, sev, score, headline, evidence });
+  if (speedP !== null && speedP < -1.5) add('pace_fade', speedP < -5 ? 'alert' : 'warn', Math.abs(speedP) * 1.5, 'Pace faded through the run', `${fmtPaceSec(first.paceMi)} → ${fmtPaceSec(last.paceMi)} /mi (${fmtPct(speedP)} speed, first → last segment)`);
+  if (efP !== null && -efP > 3) add('hr_decoupling', -efP > 5 ? 'alert' : 'warn', Math.abs(efP) * 1.4, 'Heart rate decoupled from pace', `HR ${n(first.hr,0)} → ${n(last.hr,0)} bpm (${fmtPct(hrP)}) while efficiency factor fell ${n(-efP,1)}%`);
+  if (slP !== null && slP < -2) add('stride_length_loss', slP < -4 ? 'alert' : 'warn', Math.abs(slP) * 1.3, 'Stride length shortened', `${n(first.slCm,0)} → ${n(last.slCm,0)} cm (${fmtPct(slP)})` + (srP !== null ? `, cadence ${fmtPct(srP)}` : ''));
+  if (srP !== null && srP < -2) add('cadence_drop', srP < -4 ? 'alert' : 'warn', Math.abs(srP) * 1.2, 'Stride rate dropped', `${n(first.sr,0)} → ${n(last.sr,0)} strikes/min (${fmtPct(srP)})`);
+  if (gctP !== null && gctP > 2) add('gct_rise', gctP > 4 ? 'alert' : 'warn', gctP, 'Ground contact time lengthened', `${n(first.gct,0)} → ${n(last.gct,0)} ms (${fmtPct(gctP)})`);
+  if ((voP !== null && voP > 3) || (vorP !== null && vorP > 4)) add('vo_rise', (voP > 6 || vorP > 8) ? 'alert' : 'warn', Math.max(voP||0, vorP||0), 'Vertical oscillation increased', (voP !== null ? `VO ${n(first.voCm,1)} → ${n(last.voCm,1)} cm (${fmtPct(voP)})` : '') + (vorP !== null ? `${voP!==null?'; ':''}vertical ratio ${n(first.vor,1)}% → ${n(last.vor,1)}% (${fmtPct(vorP)})` : ''));
+  if (flP !== null && flP < -4) add('flight_drop', flP < -8 ? 'alert' : 'warn', Math.abs(flP) * 0.8, 'Flight phase fell', `${n(first.flightPct,1)}% → ${n(last.flightPct,1)}% of the step cycle in the air (${fmtPct(flP)})`);
+  if (powP !== null && powP < -2 && speedP < -2) add('power_drop', powP < -5 ? 'alert' : 'warn', Math.abs(powP), 'Power output dropped with pace', `${n(first.pow,0)} → ${n(last.pow,0)} W (${fmtPct(powP)})`);
+  if (reP !== null && reP < -3) add('re_drop', reP < -6 ? 'alert' : 'warn', Math.abs(reP), 'Running effectiveness dropped (pace fell at the same power)', `speed ÷ W/kg ${n(first.re,3)} → ${n(last.re,3)} (${fmtPct(reP)})`);
+  if (!F.length) add('well_held', 'good', 1, 'Pace, heart rate and mechanics held together', `Speed ${fmtPct(speedP)} first → last segment` + (efP !== null ? `, efficiency factor ${fmtPct(efP)}` : ''));
+  F.sort((a,b) => b.score - a.score);
+  return F;
+}
+function whatIfSummary(D) {
+  if (!D) return null;
+  const cadVals = D.map((_, i) => wi.cad[i] || 0), slVals = D.map((_, i) => wi.sl[i] || 0);
+  const maxCad = Math.max(...cadVals), maxSl = Math.max(...slVals);
+  const anyChange = cadVals.some(v => v !== 0) || slVals.some(v => v !== 0);
+  let orig = 0, adj = 0, totalM = 0;
+  const rows = D.map((s, i) => { const mult = (1 + cadVals[i]/100) * (1 + slVals[i]/100); const nt = s.time / mult; orig += s.time; adj += nt; totalM += s.lenM; return { name: s.name, cad: cadVals[i], sl: slVals[i], speedPct: (mult-1)*100, time: s.time, newTime: nt, lenM: s.lenM, sr: s.sr, slCm: s.slCm }; });
+  return { anyChange, maxCad, maxSl, cadVals, slVals, rows, orig, adj, totalM };
+}
+function rpEsc(v) { return esc(v || ''); }
+async function buildReport() {
+  const status = document.getElementById('rp-status');
+  if (!lastSegments) { status.className = 'status-line err'; status.textContent = 'Run the analysis first (step 2), then build the report.'; return; }
+  status.className = 'status-line'; status.textContent = 'Loading training library…';
+  const lib = await loadTrainingLibrary();
+  status.textContent = 'Report built from the ' + trainingLibrarySource + '.';
+  const D = lastSegments, u = runDistUnit(), perUnit = u === 'km' ? KM : MI;
+  const athlete = document.getElementById('rp-athlete').value.trim() || 'Athlete';
+  const event = document.getElementById('rp-event').value.trim();
+  const dateVal = document.getElementById('rp-date').value;
+  const dateStr = dateVal ? new Date(dateVal + 'T12:00:00').toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' }) : new Date().toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
+  const coach = document.getElementById('rp-coach').value.trim();
+  const notes = document.getElementById('rp-notes').value.trim();
+  const cols = COLS.filter(c => c.req());
+  const totalM = D.reduce((a,s)=>a+s.lenM,0), totalT = D.reduce((a,s)=>a+s.time,0);
+  const first = D[0], last = D[D.length-1];
+  const findings = deriveFindings(D);
+  const w = whatIfSummary(D);
+  const schemeName = { whole:'whole run', halves:'halves', thirds:'thirds', quarters:'quarters', equal:`${D.length} equal segments`, custom:'custom distances', laps:'device laps' }[scheme] || scheme;
+  const tracked = ['Pace', metrics.hr&&'heart rate', metrics.cad&&'cadence / stride rate', metrics.sl&&'stride length', metrics.pow&&'power', metrics.gct&&'ground contact time', metrics.vo&&'vertical oscillation', metrics.vor&&'vertical ratio', metrics.flight&&'flight phase'].filter(Boolean).join(', ');
+
+  let h = `<div class="report-head"><div><h3>Run Training and Racing Analysis</h3><div class="meta">${rpEsc(athlete)}${event ? ' · ' + rpEsc(event) : ''} · ${dateStr}</div></div><div class="meta" style="text-align:right;">${rpEsc(coach)}<br>USA Triathlon Run Training and Racing Analyzer</div></div>`;
+
+  // ── PART 1
+  h += `<div class="report-part"><h4>Part 1 · The Run as It Happened</h4>`;
+  h += `<p><b>${n(fromMeters(totalM,u),2)} ${u}</b> in <b>${fmtTime(totalT)}</b>, an average of <b>${fmtPaceSec(totalT/(totalM/MI))} /mi</b> (${fmtPaceSec(totalT/(totalM/KM))} /km). Data source: ${source==='fit' ? 'device .FIT file' + (fit && fit.session ? ' (' + sportName(fit.session.sport) + ' session of a multisport file)' : '') : 'manual entry'}. Split into ${schemeName}. Metrics tracked: ${tracked}.</p>`;
+  if (notes) h += `<h5>Coach's notes</h5><p>${rpEsc(notes).replace(/\n/g,'<br>')}</p>`;
+  h += `<h5>Segment data</h5><div class="table-wrap"><table class="data-table"><thead><tr><th>Segment</th><th>Dist</th><th>Time</th>${cols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead><tbody>`;
+  D.forEach(s => { h += `<tr><td class="seg-name">${esc(s.name)}</td><td>${n(s.lenM/perUnit,2)} ${u}</td><td>${fmtTime(s.time)}</td>${cols.map(c => `<td>${s[c.key]===undefined||!isFinite(s[c.key])?'—':c.fmt(s[c.key], s)}</td>`).join('')}</tr>`; });
+  h += `</tbody></table></div>`;
+  if (D.length > 1) {
+    const pcols = cols.filter(c => !c.noPct);
+    h += `<h5>Percent change from segment 1 (pace: + = faster)</h5><div class="table-wrap"><table class="data-table"><thead><tr><th>Metric</th>${D.map(s=>`<th>${esc(s.name)}</th>`).join('')}</tr></thead><tbody>`;
+    pcols.forEach(c => { const pk = c.pctKey || c.key; h += `<tr><td class="seg-name">${c.label}</td>${D.map((s,i) => { const p = i===0 ? 0 : pct(s[pk], D[0][pk]); const cls = p===null?'flat':(Math.abs(p)<0.05?'flat':(c.dir===0?'neutral-up':((p>0)===(c.dir>0)?'up':'down'))); return `<td><span class="delta ${cls}" style="font-size:0.85rem;">${p===null?'—':(i===0?'baseline':fmtPct(p))}</span></td>`; }).join('')}</tr>`; });
+    h += `</tbody></table></div>`;
+  }
+  h += `<h5>Coach's read</h5>${document.getElementById('coach-read').innerHTML.replace(/<div class="help-text"[^>]*>[\s\S]*$/, '')}`;
+  h += `</div>`;
+
+  // ── PART 2
+  h += `<div class="report-part"><h4>Part 2 · What-If Adjustments</h4>`;
+  if (!w || !w.anyChange) {
+    h += `<p>No what-if adjustments were applied. Part 3 is built from the run data alone. To model a change, use the cadence and stride length sliders in step 6 and rebuild the report.</p>`;
+  } else {
+    const saved = w.orig - w.adj;
+    h += `<p>The sliders in step 6 were used to model ${w.maxCad !== 0 || w.cadVals.some(v=>v!==0) ? 'a cadence change' : ''}${(w.cadVals.some(v=>v!==0) && w.slVals.some(v=>v!==0)) ? ' and ' : ''}${w.slVals.some(v=>v!==0) ? 'a stride length change' : ''}. Projected result: <b>${fmtTime(w.orig)} → ${fmtTime(w.adj)}</b>, ${saved >= 0 ? 'saving' : 'adding'} <b>${fmtTime(Math.abs(saved))}</b> (${fmtPct((w.adj/w.orig-1)*100)} total time, ${fmtPct(w.orig/w.adj*100-100)} average speed). Average pace ${fmtPaceSec(w.orig/(w.totalM/perUnit))} → <b>${fmtPaceSec(w.adj/(w.totalM/perUnit))} /${u}</b>.</p>`;
+    h += `<div class="table-wrap"><table class="data-table"><thead><tr><th>Segment</th><th>Cadence adj.</th><th>Stride length adj.</th><th>Speed Δ</th>${D.some(s=>s.sr)?'<th>Stride rate</th>':''}${D.some(s=>s.slCm)?'<th>Stride length</th>':''}<th>Pace /${u}</th><th>Time</th><th>Time Δ</th></tr></thead><tbody>`;
+    w.rows.forEach(r => { const d = r.newTime - r.time; h += `<tr><td class="seg-name">${esc(r.name)}</td><td>${fmtPct(r.cad)}</td><td>${fmtPct(r.sl)}</td><td>${fmtPct(r.speedPct)}</td>${D.some(s=>s.sr)?`<td>${r.sr?`${n(r.sr,0)} → ${n(r.sr*(1+r.cad/100),0)}`:'—'}</td>`:''}${D.some(s=>s.slCm)?`<td>${r.slCm?`${n(r.slCm,0)} → ${n(r.slCm*(1+r.sl/100),0)} cm`:'—'}</td>`:''}<td>${fmtPaceSec(r.time/(r.lenM/perUnit))} → <b>${fmtPaceSec(r.newTime/(r.lenM/perUnit))}</b></td><td>${fmtTime(r.time)} → <b>${fmtTime(r.newTime)}</b></td><td>${(d>0?'+':d<0?'-':'')}${fmtTime(Math.abs(d))}</td></tr>`; });
+    h += `<tr class="total-row"><td class="seg-name">Whole run</td><td colspan="${2 + (D.some(s=>s.sr)?1:0) + (D.some(s=>s.slCm)?1:0)}"></td><td>${fmtPct(w.orig/w.adj*100-100)}</td><td>${fmtPaceSec(w.orig/(w.totalM/perUnit))} → <b>${fmtPaceSec(w.adj/(w.totalM/perUnit))}</b></td><td>${fmtTime(w.orig)} → <b>${fmtTime(w.adj)}</b></td><td>${(saved>0?'-':saved<0?'+':'')}${fmtTime(Math.abs(saved))}</td></tr></tbody></table></div>`;
+    h += `<p class="help-text" style="margin-top:0.4rem;">The what-if assumes the athlete can hold the adjusted cadence or stride length at the same physiological cost. It shows what the change is worth, not that it is free; Part 3 is how it gets earned.</p>`;
+  }
+  h += `</div>`;
+
+  // ── PART 3
+  h += `<div class="report-part"><h4>Part 3 · Training Priorities and Sessions</h4>`;
+  const keys = [];
+  findings.forEach(f => keys.push(f.key));
+  if (w && w.anyChange) { if (w.cadVals.some(v => v > 0)) keys.push('whatif_cadence'); if (w.slVals.some(v => v > 0)) keys.push('whatif_stride'); }
+  // what-if selections promote the related run findings
+  if (w && w.slVals.some(v => v > 0) && !keys.includes('stride_length_loss')) keys.push('stride_length_loss');
+  if (w && w.cadVals.some(v => v > 0) && !keys.includes('cadence_drop')) keys.push('cadence_drop');
+  const uniq = [...new Set(keys)];
+  h += `<h5>Priorities, in order</h5><div class="priority-list">`;
+  let pnum = 0;
+  findings.forEach(f => { h += `<div class="priority-item ${f.sev}"><div class="priority-num">${++pnum}</div><div><b>${esc(f.headline)}</b><div style="font-size:0.85rem;">${esc(f.evidence)}</div></div></div>`; });
+  if (w && w.anyChange) {
+    if (w.cadVals.some(v => v > 0)) h += `<div class="priority-item"><div class="priority-num">${++pnum}</div><div><b>What-if target: cadence +${n(Math.max(...w.cadVals),1)}%</b><div style="font-size:0.85rem;">Selected in step 6${first.sr ? `: ${n(first.sr,0)} → ${n(first.sr*(1+Math.max(...w.cadVals)/100),0)} strikes/min` : ''}</div></div></div>`;
+    if (w.slVals.some(v => v > 0)) h += `<div class="priority-item"><div class="priority-num">${++pnum}</div><div><b>What-if target: stride length +${n(Math.max(...w.slVals),1)}%</b><div style="font-size:0.85rem;">Selected in step 6${first.slCm ? `: ${n(first.slCm,0)} → ${n(first.slCm*(1+Math.max(...w.slVals)/100),0)} cm` : ''}</div></div></div>`;
+    if (w.cadVals.some(v => v < 0) || w.slVals.some(v => v < 0)) h += `<div class="priority-item warn"><div class="priority-num">!</div><div><b>Downward what-if used</b><div style="font-size:0.85rem;">A negative cadence or stride length adjustment was modelled, which shows the cost of letting mechanics slip rather than a training target.</div></div></div>`;
+  }
+  h += `</div>`;
+  // sessions per key
+  const used = new Set();
+  uniq.forEach(k => {
+    const rows = lib.filter(r => r.finding_key === k && !used.has(r.id)).sort((a,b) => (a.sort||0) - (b.sort||0));
+    if (!rows.length) return;
+    const f = findings.find(x => x.key === k);
+    const label = f ? f.headline : (k === 'whatif_cadence' ? 'What-if: cadence target' : k === 'whatif_stride' ? 'What-if: stride length target' : k.replace(/_/g,' '));
+    h += `<h5>${esc(label)}</h5>`;
+    rows.forEach(r => { used.add(r.id); h += `<div class="session-card"><div class="s-title">${esc(r.title)}<span class="s-tag">${esc(r.session_name)}</span></div>
+      <div class="s-row"><b>What the data shows:</b> ${esc(r.what_the_data_shows)}</div>
+      <div class="s-row"><b>Training focus:</b> ${esc(r.training_focus)}</div>
+      <div class="s-row"><b>Session:</b> ${esc(r.session_detail)}</div>
+      ${r.progression ? `<div class="s-row"><b>Progression:</b> ${esc(r.progression)}</div>` : ''}
+      ${r.frequency ? `<div class="s-row"><b>Frequency:</b> ${esc(r.frequency)}</div>` : ''}
+      ${r.kb_source ? `<div class="s-src">Source: ${esc(r.kb_source)} (USA Triathlon coaching knowledge base)</div>` : ''}</div>`; });
+  });
+  h += `<h5>Putting it in a week</h5><p>${weekPlanText(uniq)}</p>`;
+  h += `<p class="help-text">Sessions are coaching prescriptions from the USA Triathlon coaching education knowledge base, matched to the findings above. Adjust volumes to the athlete's training age, injury history and the phase of the season. Mechanics changes carry 1 to 4 weeks of extra fatigue; plan them away from key races.</p></div>`;
+  h += `<div class="meta" style="margin-top:1.2rem; font-size:0.78rem; color:var(--muted); border-top:1px solid var(--border); padding-top:0.5rem;">Generated ${new Date().toLocaleString()} · ${esc(trainingLibrarySource)} · Developed by Justin Trolle, USA Triathlon Level 3 Coach</div>`;
+
+  const out = document.getElementById('report-out'); out.innerHTML = h; out.style.display = '';
+  document.getElementById('rp-print').style.display = 'inline-flex';
+}
+function weekPlanText(keys) {
+  const has = k => keys.includes(k);
+  const parts = [];
+  if (has('pace_fade') || has('hr_decoupling') || has('power_drop')) parts.push('one long run with the durability block (LT1 steady state or progression finish)');
+  if (has('stride_length_loss') || has('vo_rise') || has('whatif_stride') || has('re_drop')) parts.push('one mechanics session built on tire drag, tow-and-release and short hills');
+  if (has('cadence_drop') || has('whatif_cadence')) parts.push('cadence work inside easy runs plus strides, with the fatigued-state cadence intervals in the long run');
+  if (has('gct_rise') || has('flight_drop') || has('stride_length_loss') || has('whatif_stride')) parts.push('two short strength sessions (heavy lower body plus a low-volume plyometric progression)');
+  if (has('pace_fade')) parts.push('the 5 x 1 km hill repeat block once a week in the strength endurance phase');
+  if (has('well_held')) parts.push('one speed endurance session with the full 25 to 30 minute warm-up');
+  if (!parts.length) parts.push('the sessions above in the order of the priorities');
+  return 'A workable week keeps the athlete\'s normal aerobic volume and adds: ' + parts.join('; ') + '. Keep the quality sessions 48 hours apart and retest the same run or segment split in 6 to 8 weeks.';
+}
+function printReport() {
+  document.body.classList.add('print-report-only');
+  const wasDark = currentTheme() === 'dark';
+  if (wasDark) document.documentElement.setAttribute('data-theme', 'light');
+  const restore = () => { document.body.classList.remove('print-report-only'); if (wasDark) document.documentElement.setAttribute('data-theme', 'dark'); window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  setTimeout(() => window.print(), 200);
 }
 
 // ═══════════════ CHARTS ═══════════════
