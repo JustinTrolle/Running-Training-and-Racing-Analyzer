@@ -459,7 +459,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-wit
         <label class="chip on"><input type="checkbox" data-metric="sl" checked onchange="onChipChange(this)"><span><span class="chip-name">Stride Length</span><span class="chip-sub">derived from pace × stride rate, or enter measured</span></span></label>
         <label class="chip"><input type="checkbox" data-metric="pow" onchange="onChipChange(this)"><span><span class="chip-name">Power</span><span class="chip-sub">watts, W/kg, running effectiveness</span></span></label>
         <label class="chip"><input type="checkbox" data-metric="gct" onchange="onChipChange(this)"><span><span class="chip-name">Ground Contact Time</span><span class="chip-sub">GCT in ms</span></span></label>
-        <label class="chip"><input type="checkbox" data-metric="vo" onchange="onChipChange(this)"><span><span class="chip-name">Vertical Oscillation</span><span class="chip-sub">inches (cm)</span></span></label>
+        <label class="chip"><input type="checkbox" data-metric="vo" onchange="onChipChange(this)"><span><span class="chip-name">Vertical Oscillation</span><span class="chip-sub">cm (inches)</span></span></label>
         <label class="chip"><input type="checkbox" data-metric="vor" onchange="onChipChange(this)"><span><span class="chip-name">Vertical Ratio (VOR)</span><span class="chip-sub">derived: VO ÷ stride length</span></span></label>
         <label class="chip"><input type="checkbox" data-metric="flight" onchange="onChipChange(this)"><span><span class="chip-name">Flight Phase %</span><span class="chip-sub">derived: time in the air vs. on the ground</span></span></label>
       </div>
@@ -568,7 +568,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-wit
             <tr><td>Cadence</td><td>80–88 cycles/min</td><td>90–102 cycles/min</td><td>Same signal as stride rate, at half the value.</td></tr>
             <tr><td>Stride Length</td><td>90–110 cm (3.0–3.6 ft)</td><td>120–160 cm (3.9–5.2 ft)</td><td>Stride length is usually the first thing to go when the athlete fatigues. Pace lost late in a race is most often lost here, not in cadence.</td></tr>
             <tr><td>Ground Contact Time</td><td>250–320 ms</td><td>180–230 ms</td><td>Rising GCT means less elastic return and more time braking. Often paired with rising vertical oscillation and falling stride length.</td></tr>
-            <tr><td>Vertical Oscillation</td><td>3.1–4.7 in (8–12 cm)</td><td>1.2–3.1 in (3–8 cm)</td><td>More bounce is wasted energy. Watch for VO rising as pace falls.</td></tr>
+            <tr><td>Vertical Oscillation</td><td>8–12 cm (3.1–4.7 in)</td><td>3–8 cm (1.2–3.1 in)</td><td>More bounce is wasted energy. Watch for VO rising as pace falls.</td></tr>
             <tr><td>Vertical Ratio (VOR)</td><td>8–11%</td><td>5–7.5%</td><td>VOR normalizes bounce to stride length. A rising VOR means more up-and-down for every foot of forward travel.</td></tr>
             <tr><td>Flight Phase</td><td>25–35% of the step cycle</td><td>35–45% of the step cycle</td><td>Flight % falls when GCT rises or stride rate falls. Less time in the air is less elastic running.</td></tr>
             <tr><td>Pace:HR Decoupling</td><td colspan="2">Under 5% is well-coupled aerobically</td><td>If HR climbs while pace falls, the efficiency factor (speed ÷ HR) drops. More than 5% decoupling across halves points to aerobic durability, pacing, heat or fueling as limiters.</td></tr>
@@ -1145,7 +1145,7 @@ const COLS = [
   { key:'pow', label:'Power', fmt:(v,d)=>`${n(v,0)} W${d.wkg?` (${n(d.wkg,2)} W/kg)`:''}`, dir:0, req:()=>metrics.pow },
   { key:'re', label:'Run Effectiveness', fmt:v=>n(v,3), dir:-1, req:()=>metrics.pow && weightKg()>0, help:'m/s ÷ W/kg' },
   { key:'gct', label:'GCT', fmt:v=>n(v,0)+' ms', dir:+1, req:()=>metrics.gct },
-  { key:'voIn', label:'Vert. Osc.', fmt:(v,d)=>`${n(v,2)} in (${n(d.voCm,1)} cm)`, dir:+1, req:()=>metrics.vo },
+  { key:'voCm', label:'Vert. Osc.', fmt:(v,d)=>`${n(v,1)} cm (${n(d.voIn,2)} in)`, dir:+1, req:()=>metrics.vo },
   { key:'vor', label:'Vert. Ratio', fmt:v=>n(v,1)+'%', dir:+1, req:()=>metrics.vor },
   { key:'flightPct', label:'Flight %', fmt:(v,d)=>`${n(v,1)}% (air:ground ${n(d.airGround,2)})`, dir:-1, req:()=>metrics.flight },
 ];
@@ -1195,7 +1195,7 @@ function analyze() {
   if (metrics.sl && whole.slCm) tiles.push({ label:'Stride Length', value: `${n(whole.slCm,0)} cm`, detail: `${n(whole.slFt,2)} ft` + (D.length>1 ? ` · ${fmtPct(pct(last.slCm, first.slCm))} first → last` : '') });
   if (metrics.pow && whole.pow) tiles.push({ label:'Average Power', value: `${n(whole.pow,0)} W`, detail: whole.wkg ? `${n(whole.wkg,2)} W/kg · RE ${n(whole.re,3)}` : 'Add weight for W/kg' });
   if (metrics.gct && whole.gct) tiles.push({ label:'Ground Contact', value: `${n(whole.gct,0)} ms`, detail: D.length>1 ? `${n(first.gct,0)} → ${n(last.gct,0)} (${fmtPct(pct(last.gct, first.gct))})` : '' });
-  if (metrics.vo && whole.voIn) tiles.push({ label:'Vertical Oscillation', value: `${n(whole.voIn,2)} in`, detail: `${n(whole.voCm,1)} cm` + (D.length>1 ? ` · ${fmtPct(pct(last.voCm, first.voCm))}` : '') });
+  if (metrics.vo && whole.voCm) tiles.push({ label:'Vertical Oscillation', value: `${n(whole.voCm,1)} cm`, detail: `${n(whole.voIn,2)} in` + (D.length>1 ? ` · ${fmtPct(pct(last.voCm, first.voCm))}` : '') });
   if (metrics.vor && whole.vor) tiles.push({ label:'Vertical Ratio', value: `${n(whole.vor,1)}%`, detail: D.length>1 ? `${n(first.vor,1)}% → ${n(last.vor,1)}%` : '' });
   if (metrics.flight && whole.flightPct !== undefined) tiles.push({ label:'Flight Phase', value: `${n(whole.flightPct,1)}%`, detail: `air:ground ${n(whole.airGround,2)}` + (D.length>1 ? ` · ${n(first.flightPct,1)}% → ${n(last.flightPct,1)}%` : '') });
   document.getElementById('summary-tiles').innerHTML = tiles.map(t => `<div class="result-box ${t.cls||''}"><div class="result-label">${t.label}</div><div class="result-value">${t.value}</div><div class="result-detail">${t.detail||''}</div></div>`).join('');
@@ -1348,7 +1348,7 @@ function buildCharts(D, u) {
   if ((metrics.gct && hasAny('gct')) || (metrics.vo && hasAny('voCm'))) {
     const ds = [], sc = {};
     if (metrics.gct && hasAny('gct')) { ds.push(line('GCT (ms)', 'gct', cssVar('--c-gct'), 'y', v=>n(v,0)+' ms')); sc.y = yAxis('left','Ground Contact (ms)', cssVar('--c-gct')); }
-    if (metrics.vo && hasAny('voCm')) { ds.push(line('Vertical Osc. (cm)', 'voCm', cssVar('--c-vo'), sc.y?'y1':'y', v=>`${n(v/2.54,2)} in (${n(v,1)} cm)`)); sc[sc.y?'y1':'y'] = yAxis(sc.y?'right':'left','Vertical Oscillation (cm)', cssVar('--c-vo')); }
+    if (metrics.vo && hasAny('voCm')) { ds.push(line('Vertical Osc. (cm)', 'voCm', cssVar('--c-vo'), sc.y?'y1':'y', v=>`${n(v,1)} cm (${n(v/2.54,2)} in)`)); sc[sc.y?'y1':'y'] = yAxis(sc.y?'right':'left','Vertical Oscillation (cm)', cssVar('--c-vo')); }
     addChart('Ground Contact vs. Vertical Oscillation', 'Both rising together through the run is the classic fatigue signature: more time on the ground, more bounce.', ds, sc);
   }
   // 4. Flight % vs VOR
@@ -1435,7 +1435,7 @@ function buildCoachRead(D, whole, halfPct) {
   if (gctP !== null || voP !== null || vorP !== null || flP !== null) {
     const parts = [];
     if (gctP !== null) parts.push(`ground contact ${fmtPct(gctP)} (${n(first.gct,0)} → ${n(last.gct,0)} ms)`);
-    if (voP !== null) parts.push(`vertical oscillation ${fmtPct(voP)} (${n(first.voIn,2)} → ${n(last.voIn,2)} in / ${n(first.voCm,1)} → ${n(last.voCm,1)} cm)`);
+    if (voP !== null) parts.push(`vertical oscillation ${fmtPct(voP)} (${n(first.voCm,1)} → ${n(last.voCm,1)} cm / ${n(first.voIn,2)} → ${n(last.voIn,2)} in)`);
     if (vorP !== null) parts.push(`vertical ratio ${fmtPct(vorP)} (${n(first.vor,1)}% → ${n(last.vor,1)}%)`);
     if (flP !== null) parts.push(`flight phase ${fmtPct(flP)} (${n(first.flightPct,1)}% → ${n(last.flightPct,1)}%)`);
     const bad = (gctP !== null && gctP > 4) || (vorP !== null && vorP > 6) || (flP !== null && flP < -8);
