@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>USAT Run Training and Racing Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* Layout: stacked numbered section cards (setup → segments → results), matching the USAT Run Pace Calculator */
+:root {
+  --usa-red: #E31837;
+  --usa-navy: #0C2340;
+  --bright-red: #CE1141;
+  --dark-blue: #13294B;
+  --steel-blue: #4B7C9B;
+  --light-gray: #D6D6D6;
+  --white: #FFFFFF;
+  --charcoal: #3E3E3E;
+  --bg: #F4F5F7;
+  --card: #FFFFFF;
+  --soft: #F8F9FB;
+  --soft-2: #EEF1F5;
+  --text: #3E3E3E;
+  --muted: #666A72;
+  --border: #E3E6EA;
+  --head-bg: #0C2340;
+  --head-fg: #FFFFFF;
+  --input-bg: #FFFFFF;
+  --good: #6DBE45;
+  --warn: #F0C808;
+  --bad: #E84855;
+  --c-pace: #0C2340;
+  --c-hr: #E31837;
+  --c-cad: #4B7C9B;
+  --c-sl: #48A9A6;
+  --c-vo: #F18F01;
+  --c-gct: #6DBE45;
+  --c-pow: #7B5EA7;
+  --c-flight: #2E86AB;
+  --c-vor: #B91C1C;
+  --c-grid: rgba(12,35,64,0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1623; --card: #172033; --soft: #1C2740; --soft-2: #222F4B;
+    --text: #E6EAF0; --muted: #A4AEBF; --border: #2B3853; --charcoal: #E6EAF0;
+    --head-bg: #0A1A33; --head-fg: #FFFFFF; --input-bg: #0F1623; --light-gray: #3A4761;
+    --c-pace: #9FB7D9; --c-grid: rgba(255,255,255,0.08);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1623; --card: #172033; --soft: #1C2740; --soft-2: #222F4B;
+  --text: #E6EAF0; --muted: #A4AEBF; --border: #2B3853; --charcoal: #E6EAF0;
+  --head-bg: #0A1A33; --head-fg: #FFFFFF; --input-bg: #0F1623; --light-gray: #3A4761;
+  --c-pace: #9FB7D9; --c-grid: rgba(255,255,255,0.08);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── HEADER ─── */
+.hero {
+  background: linear-gradient(135deg, var(--usa-navy) 0%, var(--dark-blue) 60%, var(--steel-blue) 100%);
+  color: var(--white);
+  padding: 2.5rem 1.5rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::after { content:''; position:absolute; bottom:0; left:0; right:0; height:4px; background: linear-gradient(90deg, var(--usa-red), var(--bright-red), var(--usa-red)); }
+.hero h1 { font-family:'Bebas Neue',sans-serif; font-size: clamp(2rem,5vw,3.2rem); letter-spacing:3px; line-height:1.1; margin-bottom:0.3rem; text-wrap: balance; }
+.hero p { font-family:'Barlow Condensed',sans-serif; font-size:1.1rem; opacity:0.85; }
+.hero p.byline { font-size:0.85rem; opacity:0.7; margin-top:0.25rem; letter-spacing:0.3px; }
+
+.container { max-width: 1100px; margin: 0 auto; padding-block: 1.5rem; padding-inline: 1rem; }
+
+/* ─── SECTION CARDS ─── */
+.section-card { background: var(--card); border-radius:12px; box-shadow:0 2px 12px rgba(12,35,64,0.08); margin-bottom:1.5rem; overflow:hidden; border:1px solid var(--border); }
+.section-header { background: var(--head-bg); color: var(--head-fg); padding:0.9rem 1.5rem; display:flex; align-items:center; gap:0.6rem; cursor:pointer; user-select:none; transition: background 0.2s; }
+.section-header:hover { background: var(--dark-blue); }
+.section-header h2 { font-family:'Bebas Neue',sans-serif; font-size:1.45rem; letter-spacing:2px; flex:1; }
+.step-badge { background: var(--usa-red); color:#fff; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.section-header .chevron { transition: transform 0.3s; flex-shrink:0; }
+.section-header.collapsed .chevron { transform: rotate(-90deg); }
+.section-body { padding:1.5rem; }
+.section-body.hidden { display:none; }
+
+/* ─── FORMS ─── */
+.form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1rem; }
+.form-group { display:flex; flex-direction:column; gap:0.3rem; min-width:0; }
+.form-group label, .field-label { font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:0.9rem; color: var(--usa-navy); text-transform:uppercase; letter-spacing:0.5px; }
+:root[data-theme="dark"] .form-group label, :root[data-theme="dark"] .field-label { color: #9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .form-group label, :root:not([data-theme="light"]) .field-label { color:#9FB7D9; } }
+.form-group input, .form-group select, .seg-table input, .seg-table select {
+  padding:0.6rem 0.8rem; border:2px solid var(--light-gray); border-radius:6px; font-family:'Source Sans 3',sans-serif; font-size:1rem; background: var(--input-bg); color: var(--text); transition: border-color 0.2s, box-shadow 0.2s; width:100%;
+}
+.form-group input:focus, .form-group select:focus, .seg-table input:focus { outline:none; border-color: var(--steel-blue); box-shadow:0 0 0 3px rgba(75,124,155,0.15); }
+.help-text { font-size:0.78rem; color: var(--muted); font-style: italic; }
+.time-input-group { display:flex; gap:0.4rem; align-items:center; }
+.time-input-group input { width:60px; text-align:center; padding:0.6rem 0.3rem; border:2px solid var(--light-gray); border-radius:6px; font-family:'Source Sans 3',sans-serif; font-size:1rem; background: var(--input-bg); color: var(--text); }
+.time-input-group input:focus { outline:none; border-color: var(--steel-blue); box-shadow:0 0 0 3px rgba(75,124,155,0.15); }
+.time-input-group span { font-family:'Barlow Condensed',sans-serif; font-weight:600; color: var(--usa-navy); font-size:0.85rem; }
+.inline-row { display:flex; gap:0.5rem; align-items:center; }
+.inline-row input { flex:1; min-width:0; }
+.inline-row select { width: auto; flex: 0 0 auto; }
+
+/* ─── TOGGLE ─── */
+.input-toggle { display:flex; margin-bottom:1.2rem; border-radius:8px; overflow:hidden; border:2px solid var(--usa-navy); flex-wrap: wrap; }
+.input-toggle button { flex:1; padding:0.65rem 1rem; border:none; background: var(--card); color: var(--usa-navy); font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:0.95rem; cursor:pointer; transition: all 0.2s; min-width: 120px; }
+:root[data-theme="dark"] .input-toggle button { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .input-toggle button { color:#9FB7D9; } }
+.input-toggle button.active { background: var(--usa-navy); color:#fff !important; }
+.input-toggle button:hover:not(.active) { background: var(--soft-2); }
+.toggle-panel { display:none; }
+.toggle-panel.active { display:block; }
+
+/* ─── METRIC CHIPS ─── */
+.chip-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap:0.6rem; margin: 0.5rem 0 1rem; }
+.chip { display:flex; align-items:center; gap:0.55rem; padding:0.6rem 0.8rem; border:2px solid var(--light-gray); border-radius:8px; background: var(--card); cursor:pointer; transition: all 0.2s; font-size:0.9rem; }
+.chip:hover { border-color: var(--steel-blue); }
+.chip.on { border-color: var(--usa-red); background: rgba(227,24,55,0.05); }
+.chip input { accent-color: var(--usa-red); width:16px; height:16px; }
+.chip .chip-name { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:0.95rem; color: var(--usa-navy); letter-spacing:0.3px; }
+:root[data-theme="dark"] .chip .chip-name { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip .chip-name { color:#9FB7D9; } }
+.chip .chip-sub { font-size:0.75rem; color: var(--muted); display:block; line-height:1.25; }
+.chip.locked { opacity:0.75; cursor: default; }
+
+/* ─── SEGMENT SCHEME BUTTONS ─── */
+.scheme-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap:0.6rem; margin-bottom:1rem; }
+.scheme-btn { padding:0.8rem 0.6rem; border:2px solid var(--light-gray); border-radius:8px; background: var(--card); cursor:pointer; text-align:center; transition: all 0.2s; }
+.scheme-btn:hover { border-color: var(--steel-blue); }
+.scheme-btn.active { border-color: var(--usa-red); background: rgba(227,24,55,0.04); }
+.scheme-btn .type-label { font-family:'Bebas Neue',sans-serif; font-size:1.15rem; color: var(--usa-navy); letter-spacing:1px; }
+:root[data-theme="dark"] .scheme-btn .type-label { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .scheme-btn .type-label { color:#9FB7D9; } }
+.scheme-btn .type-detail { font-size:0.75rem; color: var(--muted); margin-top:0.15rem; }
+.scheme-btn[disabled] { opacity:0.45; cursor:not-allowed; }
+
+/* ─── BUTTONS ─── */
+.btn-calculate { display:inline-flex; align-items:center; gap:0.5rem; padding:0.8rem 2rem; background: linear-gradient(135deg, var(--usa-red), var(--bright-red)); color:#fff; border:none; border-radius:8px; font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:2px; cursor:pointer; transition: transform 0.15s, box-shadow 0.2s; box-shadow:0 3px 10px rgba(227,24,55,0.3); }
+.btn-calculate:hover { transform: translateY(-1px); box-shadow:0 5px 18px rgba(227,24,55,0.4); }
+.btn-secondary { padding:0.6rem 1.2rem; background: var(--steel-blue); color:#fff; border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:0.9rem; cursor:pointer; transition: background 0.2s; }
+.btn-secondary:hover { background: var(--usa-navy); }
+.btn-ghost { padding:0.45rem 0.9rem; background: transparent; color: var(--steel-blue); border:2px solid var(--steel-blue); border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:0.85rem; cursor:pointer; }
+.btn-ghost:hover { background: var(--soft-2); }
+
+/* ─── RESULT BOXES ─── */
+.result-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap:0.8rem; }
+.result-box { background: linear-gradient(135deg, var(--soft), var(--soft-2)); border-left:4px solid var(--steel-blue); border-radius:8px; padding:0.9rem 1.1rem; min-width:0; }
+.result-box.warn { border-left-color: var(--warn); }
+.result-box.good { border-left-color: var(--good); }
+.result-box.alert { border-left-color: var(--usa-red); }
+.result-label { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px; color: var(--usa-navy); margin-bottom:0.1rem; }
+:root[data-theme="dark"] .result-label { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .result-label { color:#9FB7D9; } }
+.result-value { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; color: var(--c-pace); letter-spacing:1px; line-height:1.1; font-variant-numeric: tabular-nums; }
+.result-detail { font-size:0.82rem; color: var(--muted); margin-top:0.2rem; }
+
+/* ─── TABLES ─── */
+.table-wrap { overflow-x:auto; margin-top:0.5rem; }
+.data-table { width:100%; border-collapse:separate; border-spacing:0; font-size:0.88rem; font-variant-numeric: tabular-nums; }
+.data-table thead th { background: var(--head-bg); color:#fff; font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.4px; padding:0.6rem 0.7rem; text-align:left; white-space:nowrap; }
+.data-table thead th:first-child { border-radius:8px 0 0 0; }
+.data-table thead th:last-child { border-radius:0 8px 0 0; }
+.data-table tbody td { padding:0.55rem 0.7rem; border-bottom:1px solid var(--border); white-space:nowrap; vertical-align: top; }
+.data-table tbody tr:nth-child(even) { background: var(--soft); }
+.data-table tbody tr.total-row { background: rgba(75,124,155,0.12); font-weight:600; }
+.data-table .seg-name { font-family:'Barlow Condensed',sans-serif; font-weight:700; color: var(--usa-navy); }
+:root[data-theme="dark"] .data-table .seg-name { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .data-table .seg-name { color:#9FB7D9; } }
+.delta { display:block; font-size:0.75rem; font-family:'Barlow Condensed',sans-serif; font-weight:600; margin-top:0.1rem; }
+.delta.up { color: #B91C1C; }
+.delta.down { color: #2E7D32; }
+.delta.flat { color: var(--muted); }
+:root[data-theme="dark"] .delta.up { color:#F28B8B; }
+:root[data-theme="dark"] .delta.down { color:#8BD39A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .delta.up { color:#F28B8B; } :root:not([data-theme="light"]) .delta.down { color:#8BD39A; } }
+.delta.neutral-up { color: var(--muted); }
+
+/* segment input table */
+.seg-table { width:100%; border-collapse:separate; border-spacing:0; font-size:0.85rem; }
+.seg-table th { background: var(--head-bg); color:#fff; font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.4px; padding:0.55rem 0.5rem; text-align:left; white-space:nowrap; }
+.seg-table td { padding:0.4rem 0.4rem; border-bottom:1px solid var(--border); vertical-align: middle; }
+.seg-table input { padding:0.45rem 0.5rem; font-size:0.9rem; min-width:70px; }
+.seg-table .t-in { display:flex; gap:0.2rem; align-items:center; }
+.seg-table .t-in input { width:52px; min-width:52px; text-align:center; padding:0.45rem 0.2rem; }
+.seg-table .seg-label { font-family:'Barlow Condensed',sans-serif; font-weight:700; color: var(--usa-navy); white-space:nowrap; }
+:root[data-theme="dark"] .seg-table .seg-label { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg-table .seg-label { color:#9FB7D9; } }
+
+/* ─── INFO CALLOUTS ─── */
+.info-callout { background: linear-gradient(135deg, var(--soft), var(--soft-2)); border-left:4px solid var(--steel-blue); border-radius:0 8px 8px 0; padding:1rem 1.2rem; margin:1rem 0; font-size:0.88rem; line-height:1.55; }
+.info-callout strong { color: var(--usa-navy); font-family:'Barlow Condensed',sans-serif; font-weight:700; }
+:root[data-theme="dark"] .info-callout strong { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .info-callout strong { color:#9FB7D9; } }
+.info-callout.alert { border-left-color: var(--usa-red); }
+.info-callout.good { border-left-color: var(--good); }
+.info-callout ul { padding-left: 1.2rem; margin-top: 0.4rem; }
+.info-callout li { margin-bottom: 0.3rem; }
+
+/* ─── FIT DROP ZONE ─── */
+.drop-zone { border:2px dashed var(--steel-blue); border-radius:10px; padding:1.6rem 1rem; text-align:center; background: var(--soft); cursor:pointer; transition: all 0.2s; }
+.drop-zone:hover, .drop-zone.drag { border-color: var(--usa-red); background: rgba(227,24,55,0.04); }
+.drop-zone .dz-title { font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:1.5px; color: var(--usa-navy); }
+:root[data-theme="dark"] .drop-zone .dz-title { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .drop-zone .dz-title { color:#9FB7D9; } }
+.drop-zone .dz-sub { font-size:0.85rem; color: var(--muted); }
+.fit-summary { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:0.6rem; margin-top:1rem; }
+.fit-pill { background: var(--card); border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.7rem; font-size:0.8rem; }
+.fit-pill b { display:block; font-family:'Barlow Condensed',sans-serif; font-size:1rem; color: var(--usa-navy); }
+:root[data-theme="dark"] .fit-pill b { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fit-pill b { color:#9FB7D9; } }
+
+/* ─── CHARTS ─── */
+.chart-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap:1rem; margin-top:1rem; }
+.chart-card { background: var(--card); border:1px solid var(--border); border-radius:10px; padding:0.9rem 1rem 0.6rem; min-width:0; }
+.chart-card h3 { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.5px; color: var(--usa-navy); margin-bottom:0.3rem; }
+:root[data-theme="dark"] .chart-card h3 { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chart-card h3 { color:#9FB7D9; } }
+.chart-card .chart-sub { font-size:0.78rem; color: var(--muted); margin-bottom:0.4rem; }
+.chart-box { position:relative; height:240px; width:100%; }
+.chart-card.wide { grid-column: 1 / -1; }
+.chart-card.wide .chart-box { height: 300px; }
+
+.subhead { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:1.5px; color: var(--usa-navy); margin:1.4rem 0 0.5rem; }
+:root[data-theme="dark"] .subhead { color:#9FB7D9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .subhead { color:#9FB7D9; } }
+
+.ref-table td:first-child { font-family:'Barlow Condensed',sans-serif; font-weight:700; }
+.status-line { font-size:0.85rem; color: var(--muted); margin-top:0.5rem; }
+.status-line.err { color: var(--usa-red); }
+button:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-within { outline: 3px solid rgba(75,124,155,0.5); outline-offset: 1px; }
+
+/* ─── WHAT-IF SLIDERS ─── */
+.slider-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:1rem; margin-bottom:1rem; }
+.slider-card { background: linear-gradient(135deg, var(--soft), var(--soft-2)); border-left:4px solid var(--steel-blue); border-radius:8px; padding:0.9rem 1.1rem; }
+.slider-card.cad { border-left-color: var(--c-cad); }
+.slider-card.sl { border-left-color: var(--c-sl); }
+.slider-head { display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; }
+.slider-val { font-family:'Bebas Neue',sans-serif; font-size:1.7rem; color: var(--c-pace); letter-spacing:1px; font-variant-numeric: tabular-nums; }
+.slider-row { display:flex; align-items:center; gap:0.5rem; margin:0.5rem 0 0.2rem; }
+.slider-row input[type=range] { flex:1; min-width:0; accent-color: var(--usa-red); }
+.step-btn { width:30px; height:30px; flex:0 0 auto; border-radius:50%; border:2px solid var(--steel-blue); background: var(--card); color: var(--steel-blue); font-family:'Bebas Neue',sans-serif; font-size:1.1rem; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition: all 0.15s; padding:0; }
+.step-btn:hover { background: var(--steel-blue); color:#fff; }
+.step-btn.sm { width:22px; height:22px; font-size:0.85rem; border-width:1.5px; vertical-align:middle; }
+.slider-ticks { padding: 0 38px; }
+.seg-slider { display:inline-flex; align-items:center; gap:0.25rem; }
+.slider-ticks { display:flex; justify-content:space-between; font-size:0.72rem; font-family:'Barlow Condensed',sans-serif; color: var(--muted); }
+.data-table input[type=range] { width:90px; min-width:90px; padding:0; border:none; accent-color: var(--usa-red); vertical-align:middle; }
+.data-table .mini-val { display:inline-block; width:46px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:0.85rem; color: var(--c-pace); font-variant-numeric: tabular-nums; text-align:right; }
+.whatif-note { font-size:0.85rem; color: var(--muted); margin-top:0.5rem; }
+
+/* ─── THEME TOGGLE ─── */
+.theme-toggle {
+  position: absolute; top: 0.9rem; right: 0.9rem; z-index: 2;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.45rem 0.8rem; border-radius: 999px;
+  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.35);
+  color: #fff; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 0.85rem;
+  letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; transition: background 0.2s;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.26); }
+.theme-toggle svg { width: 16px; height: 16px; }
+.theme-toggle .ico-moon, :root[data-theme="dark"] .theme-toggle .ico-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .ico-moon { display: inline; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .ico-sun { display: none; }
+  :root:not([data-theme="light"]) .theme-toggle .ico-moon { display: inline; }
+}
+
+/* ─── PRINT BAR ─── */
+.print-bar { text-align: center; margin: 0.5rem 0 2rem; display: none; }
+.btn-print {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.8rem 2rem;
+  background: var(--usa-navy); color: #fff; border: none; border-radius: 8px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 2px; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s; box-shadow: 0 3px 10px rgba(12,35,64,0.3);
+}
+.btn-print:hover { background: var(--dark-blue); transform: translateY(-1px); box-shadow: 0 5px 18px rgba(12,35,64,0.4); }
+.print-bar .print-note { font-size: 0.82rem; color: var(--muted); margin-top: 0.5rem; font-style: italic; }
+.print-only { display: none; }
+
+@media print {
+  @page { margin: 0.5in; }
+  :root, :root[data-theme="dark"] {
+    --bg: #FFFFFF; --card: #FFFFFF; --soft: #F8F9FB; --soft-2: #EEF1F5; --text: #3E3E3E; --muted: #666A72;
+    --border: #E3E6EA; --head-bg: #0C2340; --head-fg: #FFFFFF; --input-bg: #FFFFFF; --light-gray: #D6D6D6;
+    --charcoal: #3E3E3E; --c-pace: #0C2340; --c-grid: rgba(12,35,64,0.08); color-scheme: light;
+  }
+  body { background: #fff; }
+  .hero { padding: 1rem; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .container { padding: 0; max-width: none; }
+  .section-card { animation: none; box-shadow: none; border: 1px solid #ccc; margin-bottom: 0; break-inside: auto; }
+  /* Setup and segment-entry cards stay out of the printout; results, charts and coach's read print */
+  #sec-setup, #sec-segments, .theme-toggle, .print-bar, .help-text, .btn-calculate, .btn-secondary, .btn-ghost, .status-line { display: none !important; }
+  .print-only { display: block; }
+  #sec-charts, #sec-read { page-break-before: always; break-before: page; }
+  .section-header { cursor: default; }
+  .section-header .chevron { display: none; }
+  .section-body.hidden { display: block; }
+  .table-wrap { overflow: visible; }
+  .data-table { font-size: 0.78rem; }
+  .data-table tbody td, .data-table thead th { padding: 0.35rem 0.45rem; white-space: normal; }
+  .result-box, .info-callout, .chart-card, .data-table tr { page-break-inside: avoid; break-inside: avoid; }
+  .chart-grid { grid-template-columns: 1fr 1fr; }
+  .chart-card.wide { grid-column: 1 / -1; }
+  .chart-box { height: 220px; }
+  .chart-card.wide .chart-box { height: 260px; }
+  .section-header, .step-badge, .result-box, .info-callout, .data-table thead th, .seg-table th, .delta, .chip.on, .scheme-btn.active {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+}
+
+@media (max-width: 768px) {
+  .container { padding-inline: 0.8rem; }
+  .theme-toggle { top: 0.5rem; right: 0.5rem; padding: 0.35rem 0.6rem; }
+  .theme-toggle .toggle-text { display: none; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+@keyframes fadeInUp { from { opacity:0; transform: translateY(12px);} to { opacity:1; transform:none; } }
+.section-card { animation: fadeInUp 0.4s ease both; }
+@media (prefers-reduced-motion: reduce) { .section-card { animation:none; } .section-header .chevron { transition:none; } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch between light and dark mode" title="Light / dark mode">
+    <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <span class="toggle-text" id="theme-label">Dark Mode</span>
+  </button>
+  <div style="display:flex; align-items:center; justify-content:center; gap:1.2rem; flex-wrap:wrap;">
+    <img src="https://raw.githubusercontent.com/JustinTrolle/USAT-Images/52c71743566619c0f52cc1b80849691cba7c9f20/USA_Triathlon_Education_Logo_Transparent.png" alt="USA Triathlon Education" style="height:72px; width:auto; flex-shrink:0;">
+    <div>
+      <h1>Run Training and Racing Analyzer</h1>
+      <p>USA Triathlon — Pace, Heart Rate &amp; Running Mechanics by Segment</p>
+      <p class="byline">Developed by Justin Trolle - USA Triathlon Level 3 Coach</p>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════ SECTION 1: RUN SETUP & METRICS ═══════════════ -->
+  <div class="section-card" id="sec-setup">
+    <div class="section-header" onclick="toggleSection('setup')">
+      <span class="step-badge">1</span>
+      <h2>Run Setup &amp; Metrics to Analyze</h2>
+      <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="section-body" id="body-setup">
+      <div class="info-callout">
+        <strong>How this works.</strong> Enter the run (or drop in a .FIT file), pick the metrics you want to track, choose how to split the run into segments, then analyze. You get raw numbers per segment, the percent change from segment to segment and from the first segment, and charts of how pace, heart rate and running mechanics drifted through the run.
+        <br><br><strong>Terminology used here:</strong> <strong>Cadence</strong> = full gait cycles per minute (left foot strike to left foot strike). <strong>Stride Rate</strong> = foot strikes per minute (every foot strike counts, so Stride Rate = 2 × Cadence). Most watches label Stride Rate as "cadence" in steps per minute. <strong>Stride Length</strong> here = distance covered per foot strike (what watches report), and <strong>Cycle Length</strong> = distance per full gait cycle (2 × Stride Length).
+      </div>
+
+      <div class="input-toggle" id="source-toggle">
+        <button class="active" onclick="switchSource('manual', this)">Manual Entry</button>
+        <button onclick="switchSource('fit', this)">Upload .FIT File</button>
+      </div>
+
+      <!-- MANUAL SOURCE -->
+      <div class="toggle-panel active" id="panel-manual">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Run Distance</label>
+            <div class="inline-row">
+              <input type="number" id="run-dist" value="13.1" min="0.01" step="0.01">
+              <select id="run-dist-unit" onchange="onDistanceChange()">
+                <option value="mi">miles</option>
+                <option value="km">km</option>
+                <option value="m">meters</option>
+              </select>
+            </div>
+            <span class="help-text">Total run distance. Segments are built from this.</span>
+          </div>
+          <div class="form-group">
+            <label>Total Run Time</label>
+            <div class="time-input-group">
+              <input type="number" id="run-hh" min="0" max="23" value="1" placeholder="hh"><span>:</span>
+              <input type="number" id="run-mm" min="0" max="59" value="38" placeholder="mm"><span>:</span>
+              <input type="number" id="run-ss" min="0" max="59" value="20" placeholder="ss">
+            </div>
+            <span class="help-text">Used to pre-fill even splits. Edit each segment below after building.</span>
+          </div>
+          <div class="form-group">
+            <label>Cadence Input Style</label>
+            <select id="cad-style" onchange="onCadStyleChange()">
+              <option value="sr">Stride Rate (foot strikes / min, watch "cadence")</option>
+              <option value="cad">Cadence (gait cycles / min)</option>
+            </select>
+            <span class="help-text">Pick whichever your device reports. Both are shown in the results.</span>
+          </div>
+          <div class="form-group">
+            <label>Athlete Weight (optional, for W/kg)</label>
+            <div class="inline-row">
+              <input type="number" id="weight" placeholder="e.g. 154" min="0" step="0.1">
+              <select id="weight-unit"><option value="lb">lb</option><option value="kg">kg</option></select>
+            </div>
+            <span class="help-text">Only used when Power is selected.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIT SOURCE -->
+      <div class="toggle-panel" id="panel-fit">
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('fit-input').click()">
+          <div class="dz-title">Drop a .FIT file here or click to browse</div>
+          <div class="dz-sub">Garmin, COROS, Wahoo, Suunto and Stryd-enabled files. Everything is read in your browser; nothing is uploaded anywhere.</div>
+          <input type="file" id="fit-input" accept=".fit,.FIT" style="display:none" onchange="handleFitFiles(this.files)">
+        </div>
+        <div class="status-line" id="fit-status">No file loaded.</div>
+        <div class="fit-summary" id="fit-summary" style="display:none;"></div>
+        <div class="form-grid" style="margin-top:1rem;">
+          <div class="form-group">
+            <label>Display Distance Unit</label>
+            <select id="fit-dist-unit"><option value="mi">miles</option><option value="km">km</option></select>
+          </div>
+          <div class="form-group">
+            <label>Athlete Weight (optional, for W/kg)</label>
+            <div class="inline-row">
+              <input type="number" id="weight-fit" placeholder="e.g. 154" min="0" step="0.1">
+              <select id="weight-unit-fit"><option value="lb">lb</option><option value="kg">kg</option></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Trim Start / End (optional, time)</label>
+            <div class="inline-row" style="flex-wrap:wrap; gap:0.6rem;">
+              <div class="time-input-group"><span>Start</span><input type="number" id="trim-start-mm" min="0" placeholder="mm" value=""><span>:</span><input type="number" id="trim-start-ss" min="0" max="59" placeholder="ss" value=""></div>
+              <div class="time-input-group"><span>End</span><input type="number" id="trim-end-mm" min="0" placeholder="mm" value=""><span>:</span><input type="number" id="trim-end-ss" min="0" max="59" placeholder="ss" value=""></div>
+            </div>
+            <span class="help-text">Minutes and seconds to cut from the start and from the end of the file. Use this to isolate the run leg if the file includes a transition, warm-up or cool-down.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-label" style="margin-top:0.5rem;">Select the metrics to track</div>
+      <span class="help-text">Pace is always included. Toggle the rest on or off. Items marked "derived" are calculated from the others.</span>
+      <div class="chip-grid" id="metric-chips">
+        <label class="chip locked"><input type="checkbox" checked disabled><span><span class="chip-name">Pace</span><span class="chip-sub">min/mi and min/km, speed</span></span></label>
+        <label class="chip on"><input type="checkbox" data-metric="hr" checked onchange="onChipChange(this)"><span><span class="chip-name">Heart Rate</span><span class="chip-sub">bpm, Pace:HR efficiency</span></span></label>
+        <label class="chip on"><input type="checkbox" data-metric="cad" checked onchange="onChipChange(this)"><span><span class="chip-name">Cadence / Stride Rate</span><span class="chip-sub">cycles/min and strikes/min</span></span></label>
+        <label class="chip on"><input type="checkbox" data-metric="sl" checked onchange="onChipChange(this)"><span><span class="chip-name">Stride Length</span><span class="chip-sub">derived from pace × stride rate, or enter measured</span></span></label>
+        <label class="chip"><input type="checkbox" data-metric="pow" onchange="onChipChange(this)"><span><span class="chip-name">Power</span><span class="chip-sub">watts, W/kg, running effectiveness</span></span></label>
+        <label class="chip"><input type="checkbox" data-metric="gct" onchange="onChipChange(this)"><span><span class="chip-name">Ground Contact Time</span><span class="chip-sub">GCT in ms</span></span></label>
+        <label class="chip"><input type="checkbox" data-metric="vo" onchange="onChipChange(this)"><span><span class="chip-name">Vertical Oscillation</span><span class="chip-sub">inches (cm)</span></span></label>
+        <label class="chip"><input type="checkbox" data-metric="vor" onchange="onChipChange(this)"><span><span class="chip-name">Vertical Ratio (VOR)</span><span class="chip-sub">derived: VO ÷ stride length</span></span></label>
+        <label class="chip"><input type="checkbox" data-metric="flight" onchange="onChipChange(this)"><span><span class="chip-name">Flight Phase %</span><span class="chip-sub">derived: time in the air vs. on the ground</span></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SECTION 2: SEGMENTS ═══════════════ -->
+  <div class="section-card" id="sec-segments">
+    <div class="section-header" onclick="toggleSection('segments')">
+      <span class="step-badge">2</span>
+      <h2>Segment Breakdown</h2>
+      <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="section-body" id="body-segments">
+      <div class="field-label" style="margin-bottom:0.5rem;">How do you want to split the run?</div>
+      <div class="scheme-grid" id="scheme-grid">
+        <button class="scheme-btn" data-scheme="whole" onclick="selectScheme('whole', this)"><div class="type-label">Whole Run</div><div class="type-detail">One segment</div></button>
+        <button class="scheme-btn" data-scheme="halves" onclick="selectScheme('halves', this)"><div class="type-label">Halves</div><div class="type-detail">1st vs 2nd half</div></button>
+        <button class="scheme-btn" data-scheme="thirds" onclick="selectScheme('thirds', this)"><div class="type-label">Thirds</div><div class="type-detail">3 equal segments</div></button>
+        <button class="scheme-btn active" data-scheme="quarters" onclick="selectScheme('quarters', this)"><div class="type-label">Quarters</div><div class="type-detail">4 equal segments</div></button>
+        <button class="scheme-btn" data-scheme="equal" onclick="selectScheme('equal', this)"><div class="type-label">N Equal</div><div class="type-detail">Choose a count</div></button>
+        <button class="scheme-btn" data-scheme="custom" onclick="selectScheme('custom', this)"><div class="type-label">Custom</div><div class="type-detail">Your own distances</div></button>
+        <button class="scheme-btn" data-scheme="laps" id="scheme-laps" onclick="selectScheme('laps', this)" disabled><div class="type-label">Device Laps</div><div class="type-detail">From .FIT file</div></button>
+      </div>
+
+      <div id="scheme-equal-opts" style="display:none;" class="form-grid">
+        <div class="form-group">
+          <label>Number of Equal Segments</label>
+          <input type="number" id="equal-n" value="6" min="2" max="40" step="1">
+        </div>
+      </div>
+      <div id="scheme-custom-opts" style="display:none;">
+        <div class="form-grid">
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Segment Distances (comma separated, in the run's distance unit)</label>
+            <input type="text" id="custom-dists" placeholder="e.g. 3, 3, 3, 3, 1.1">
+            <span class="help-text">They should add up to the total run distance. If they fall short, a final segment is added for the remainder.</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; margin: 0.4rem 0 1rem;">
+        <button class="btn-secondary" onclick="buildSegmentInputs()">Build Segment Table</button>
+        <button class="btn-ghost" onclick="loadExample()">Load Example Half Marathon</button>
+        <span class="help-text" id="seg-note"></span>
+      </div>
+
+      <div class="table-wrap" id="seg-input-wrap"></div>
+
+      <div style="text-align:center; margin-top:1.4rem;">
+        <button class="btn-calculate" onclick="analyze()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 15l4-6 4 4 6-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ANALYZE SEGMENTS
+        </button>
+      </div>
+      <div class="status-line err" id="analyze-err"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SECTION 3: RESULTS ═══════════════ -->
+  <div class="section-card" id="sec-results" style="display:none;">
+    <div class="section-header" onclick="toggleSection('results')">
+      <span class="step-badge">3</span>
+      <h2>Segment Results &amp; Percent Changes</h2>
+      <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="section-body" id="body-results">
+      <div class="print-only info-callout" id="print-header" style="margin-top:0;"></div>
+      <div class="result-grid" id="summary-tiles"></div>
+      <div class="subhead">Raw Numbers by Segment</div>
+      <span class="help-text">Under each value: change vs. the previous segment, then change vs. segment 1 (in brackets). Pace percentages are speed-based, so + = faster. Red = slower, higher HR, longer ground contact, more bounce, shorter stride. Green = the opposite.</span>
+      <div class="table-wrap"><table class="data-table" id="results-table"></table></div>
+      <div class="subhead">Percent Change Matrix</div>
+      <span class="help-text">Every tracked metric as a % change from segment 1. The first segment is the baseline (0%). For pace, + = faster.</span>
+      <div class="table-wrap"><table class="data-table" id="pct-table"></table></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SECTION 4: CHARTS ═══════════════ -->
+  <div class="section-card" id="sec-charts" style="display:none;">
+    <div class="section-header" onclick="toggleSection('charts')">
+      <span class="step-badge">4</span>
+      <h2>Trend Charts</h2>
+      <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="section-body" id="body-charts">
+      <div class="chart-grid" id="chart-grid"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SECTION 5: COACH'S READ ═══════════════ -->
+  <div class="section-card" id="sec-read" style="display:none;">
+    <div class="section-header" onclick="toggleSection('read')">
+      <span class="step-badge">5</span>
+      <h2>Coach's Read &amp; Reference Ranges</h2>
+      <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="section-body" id="body-read">
+      <div id="coach-read"></div>
+      <div class="subhead">Reference Ranges</div>
+      <div class="table-wrap">
+        <table class="data-table ref-table">
+          <thead><tr><th>Metric</th><th>Typical Recreational</th><th>Trained / Elite</th><th>What a Drift Through the Run Usually Means</th></tr></thead>
+          <tbody>
+            <tr><td>Stride Rate</td><td>160–175 strikes/min</td><td>180–204 strikes/min</td><td>Falling stride rate late in a run points to neuromuscular fatigue or loss of focus. Rising stride rate with falling stride length is the body protecting itself (shorter, quicker steps).</td></tr>
+            <tr><td>Cadence</td><td>80–88 cycles/min</td><td>90–102 cycles/min</td><td>Same signal as stride rate, at half the value.</td></tr>
+            <tr><td>Stride Length</td><td>90–110 cm (3.0–3.6 ft)</td><td>120–160 cm (3.9–5.2 ft)</td><td>Stride length is usually the first thing to go when the athlete fatigues. Pace lost late in a race is most often lost here, not in cadence.</td></tr>
+            <tr><td>Ground Contact Time</td><td>250–320 ms</td><td>180–230 ms</td><td>Rising GCT means less elastic return and more time braking. Often paired with rising vertical oscillation and falling stride length.</td></tr>
+            <tr><td>Vertical Oscillation</td><td>3.1–4.7 in (8–12 cm)</td><td>1.2–3.1 in (3–8 cm)</td><td>More bounce is wasted energy. Watch for VO rising as pace falls.</td></tr>
+            <tr><td>Vertical Ratio (VOR)</td><td>8–11%</td><td>5–7.5%</td><td>VOR normalizes bounce to stride length. A rising VOR means more up-and-down for every foot of forward travel.</td></tr>
+            <tr><td>Flight Phase</td><td>25–35% of the step cycle</td><td>35–45% of the step cycle</td><td>Flight % falls when GCT rises or stride rate falls. Less time in the air is less elastic running.</td></tr>
+            <tr><td>Pace:HR Decoupling</td><td colspan="2">Under 5% is well-coupled aerobically</td><td>If HR climbs while pace falls, the efficiency factor (speed ÷ HR) drops. More than 5% decoupling across halves points to aerobic durability, pacing, heat or fueling as limiters.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-callout" style="margin-top:1rem;">
+        <strong>Formulas.</strong> Stride Rate = 2 × Cadence. Stride Length (per strike, cm) = speed (cm/min) ÷ Stride Rate. Cycle Length = 2 × Stride Length. VOR = Vertical Oscillation ÷ Stride Length × 100. Step Cycle Time = 60,000 ms ÷ Stride Rate. Flight Time = Step Cycle Time − GCT. Flight % = Flight Time ÷ Step Cycle Time × 100. Air:Ground Ratio = Flight Time ÷ GCT. Efficiency Factor = speed (m/min) ÷ HR. Running Effectiveness = speed (m/s) ÷ (W/kg). % change = (segment − reference) ÷ reference × 100.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PRINT RESULTS ═══════════════ -->
+  <div class="print-bar" id="print-bar">
+    <button class="btn-print" onclick="printResults()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7V3h10v4M5 14H3V8h14v6h-2M6 12h8v5H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      PRINT RESULTS
+    </button>
+    <div class="print-note">Prints the segment results, charts and coach's read (setup and entry tables are left out). Enable "Background graphics" in your print dialog to keep the colors.</div>
+  </div>
+
+  <!-- ═══════════════ SECTION 6: WHAT-IF ═══════════════ -->
+  <div class="section-card" id="sec-whatif" style="display:none;">
+    <div class="section-header" onclick="toggleSection('whatif')">
+      <span class="step-badge">6</span>
+      <h2>What-If: Cadence &amp; Stride Length Adjustments</h2>
+      <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="section-body" id="body-whatif">
+      <div class="info-callout">
+        <strong>Speed = Stride Rate × Stride Length.</strong> Slide cadence (stride rate) and stride length up or down by up to 10% to see what it does to each segment's pace and time and to the overall finish time. The master sliders move every segment together; the per-segment sliders let you test a change in just one part of the run (for example holding stride length in the last quarter). Changes multiply: +5% cadence and +5% stride length is about +10% speed.
+      </div>
+      <div class="slider-grid">
+        <div class="slider-card cad">
+          <div class="slider-head"><span class="result-label">Cadence / Stride Rate (all segments)</span><span class="slider-val" id="wi-cad-val">0.0%</span></div>
+          <div class="slider-row"><button class="step-btn" type="button" onclick="stepMaster('cad', -0.5)" aria-label="Decrease cadence 0.5%">&#9664;</button><input type="range" id="wi-cad" min="-10" max="10" step="0.5" value="0" oninput="setMaster('cad', this.value)"><button class="step-btn" type="button" onclick="stepMaster('cad', 0.5)" aria-label="Increase cadence 0.5%">&#9654;</button></div>
+          <div class="slider-ticks"><span>-10%</span><span>-5%</span><span>0</span><span>+5%</span><span>+10%</span></div>
+        </div>
+        <div class="slider-card sl">
+          <div class="slider-head"><span class="result-label">Stride Length (all segments)</span><span class="slider-val" id="wi-sl-val">0.0%</span></div>
+          <div class="slider-row"><button class="step-btn" type="button" onclick="stepMaster('sl', -0.5)" aria-label="Decrease stride length 0.5%">&#9664;</button><input type="range" id="wi-sl" min="-10" max="10" step="0.5" value="0" oninput="setMaster('sl', this.value)"><button class="step-btn" type="button" onclick="stepMaster('sl', 0.5)" aria-label="Increase stride length 0.5%">&#9654;</button></div>
+          <div class="slider-ticks"><span>-10%</span><span>-5%</span><span>0</span><span>+5%</span><span>+10%</span></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; margin-bottom:0.8rem;">
+        <button class="btn-ghost" onclick="resetWhatIf()">Reset All to 0%</button>
+        <span class="help-text">Pace shown per <span id="wi-unit">mi</span>. Green = faster / time saved, red = slower / time added.</span>
+      </div>
+      <div class="result-grid" id="wi-tiles" style="margin-bottom:1rem;"></div>
+      <div class="table-wrap"><table class="data-table" id="wi-table"></table></div>
+      <div class="whatif-note">Stride length and stride rate values are shown when they were tracked. The pace and time math works either way, because the sliders scale speed directly.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════ UTILITIES ═══════════════
+const MI = 1609.344, KM = 1000;
+function fmtTime(s) {
+  if (!isFinite(s) || s < 0) return '—';
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.round(s%60);
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+function fmtPaceSec(secPerUnit) { if (!isFinite(secPerUnit) || secPerUnit <= 0) return '—'; return fmtTime(secPerUnit); }
+function n(v, d=1) { return (v === null || v === undefined || !isFinite(v)) ? '—' : Number(v).toFixed(d); }
+function pct(a, ref) { if (!isFinite(a) || !isFinite(ref) || ref === 0) return null; return (a - ref) / ref * 100; }
+function toMeters(val, unit) { return unit === 'mi' ? val*MI : unit === 'km' ? val*KM : val; }
+function fromMeters(m, unit) { return unit === 'mi' ? m/MI : unit === 'km' ? m/KM : m; }
+function unitLabel(u) { return u === 'mi' ? 'mi' : u === 'km' ? 'km' : 'm'; }
+function toggleSection(id) { const b = document.getElementById('body-'+id); b.classList.toggle('hidden'); b.previousElementSibling.classList.toggle('collapsed'); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ═══════════════ THEME ═══════════════
+function currentTheme() {
+  const t = document.documentElement.getAttribute('data-theme');
+  if (t === 'dark' || t === 'light') return t;
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  const lbl = document.getElementById('theme-label'); if (lbl) lbl.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+  try { localStorage.setItem('usat-rsa-theme', t); } catch (e) {}
+  if (lastSegments) buildCharts(lastSegments, runDistUnit());
+}
+function toggleTheme() { applyTheme(currentTheme() === 'dark' ? 'light' : 'dark'); }
+(function initTheme() {
+  let saved = null; try { saved = localStorage.getItem('usat-rsa-theme'); } catch (e) {}
+  if (saved === 'dark' || saved === 'light') document.documentElement.setAttribute('data-theme', saved);
+  const lbl = document.getElementById('theme-label'); if (lbl) lbl.textContent = currentTheme() === 'dark' ? 'Light Mode' : 'Dark Mode';
+})();
+
+// ═══════════════ PRINT ═══════════════
+function printResults() {
+  // open every results section so nothing collapsed is left out, then print
+  ['results','charts','read'].forEach(id => { const b = document.getElementById('body-'+id); if (b && b.classList.contains('hidden')) { b.classList.remove('hidden'); b.previousElementSibling.classList.remove('collapsed'); } });
+  const wasDark = currentTheme() === 'dark';
+  if (wasDark && lastSegments) { document.documentElement.setAttribute('data-theme', 'light'); buildCharts(lastSegments, runDistUnit()); }
+  const restore = () => { if (wasDark) { document.documentElement.setAttribute('data-theme', 'dark'); if (lastSegments) buildCharts(lastSegments, runDistUnit()); } window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  setTimeout(() => { window.print(); }, 250);
+}
+
+// ═══════════════ STATE ═══════════════
+let source = 'manual';
+let scheme = 'quarters';
+let fit = null;            // parsed FIT { records, laps, totalDist, totalTime, hasFields }
+let metrics = { hr:true, cad:true, sl:true, pow:false, gct:false, vo:false, vor:false, flight:false };
+let charts = [];
+let lastSegments = null;
+
+function switchSource(s, btn) {
+  source = s;
+  document.querySelectorAll('#source-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-manual').classList.toggle('active', s === 'manual');
+  document.getElementById('panel-fit').classList.toggle('active', s === 'fit');
+  document.getElementById('scheme-laps').disabled = !(s === 'fit' && fit && fit.laps.length > 1);
+  if (scheme === 'laps' && s !== 'fit') selectScheme('quarters', document.querySelector('[data-scheme="quarters"]'));
+  document.getElementById('seg-input-wrap').innerHTML = '';
+  document.getElementById('seg-note').textContent = s === 'fit' ? 'FIT mode: segments are calculated from the file. Build the table to preview the split.' : '';
+}
+function onChipChange(cb) {
+  cb.closest('.chip').classList.toggle('on', cb.checked);
+  metrics[cb.dataset.metric] = cb.checked;
+  // derived metrics need their parents
+  if (cb.dataset.metric === 'vor' && cb.checked) { forceMetric('vo'); forceMetric('cad'); }
+  if (cb.dataset.metric === 'flight' && cb.checked) { forceMetric('gct'); forceMetric('cad'); }
+  if (cb.dataset.metric === 'sl' && cb.checked) { forceMetric('cad'); }
+  if (document.getElementById('seg-input-wrap').innerHTML) buildSegmentInputs(true);
+}
+function forceMetric(key) {
+  const cb = document.querySelector(`[data-metric="${key}"]`);
+  if (cb && !cb.checked) { cb.checked = true; cb.closest('.chip').classList.add('on'); metrics[key] = true; }
+}
+function onCadStyleChange() { if (document.getElementById('seg-input-wrap').innerHTML) buildSegmentInputs(true); }
+function onDistanceChange() { if (document.getElementById('seg-input-wrap').innerHTML) buildSegmentInputs(); }
+function cadStyle() { return document.getElementById('cad-style').value; }
+
+function selectScheme(s, el) {
+  if (el && el.disabled) return;
+  scheme = s;
+  document.querySelectorAll('.scheme-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('scheme-equal-opts').style.display = s === 'equal' ? 'grid' : 'none';
+  document.getElementById('scheme-custom-opts').style.display = s === 'custom' ? 'block' : 'none';
+  if (document.getElementById('seg-input-wrap').innerHTML) buildSegmentInputs();
+}
+
+
+// trim times (mm:ss from start / from end) -> meters, by interpolating the record stream
+function distanceAtTime(recs, t) {
+  if (t <= recs[0].t) return recs[0].d;
+  for (let i=1;i<recs.length;i++) { if (recs[i].t >= t) { const a = recs[i-1], b = recs[i]; if (b.t === a.t) return b.d; return a.d + (b.d - a.d) * (t - a.t) / (b.t - a.t); } }
+  return recs[recs.length-1].d;
+}
+function trimMeters() {
+  if (!fit) return { ts: 0, te: 0 };
+  const g = id => parseInt(document.getElementById(id).value) || 0;
+  const tsSec = g('trim-start-mm')*60 + g('trim-start-ss'), teSec = g('trim-end-mm')*60 + g('trim-end-ss');
+  const recs = fit.records, t0 = recs[0].t, tEnd = recs[recs.length-1].t;
+  const ts = tsSec > 0 ? distanceAtTime(recs, t0 + tsSec) : 0;
+  const te = teSec > 0 ? fit.totalDist - distanceAtTime(recs, tEnd - teSec) : 0;
+  return { ts: Math.max(0, ts), te: Math.max(0, te) };
+}
+
+// ═══════════════ SEGMENT GEOMETRY ═══════════════
+function runDistUnit() { return source === 'fit' ? document.getElementById('fit-dist-unit').value : document.getElementById('run-dist-unit').value; }
+function totalDistanceMeters() {
+  if (source === 'fit') {
+    if (!fit) return 0;
+    const u = runDistUnit();
+    const { ts, te } = trimMeters();
+    return Math.max(0, fit.totalDist - ts - te);
+  }
+  return toMeters(parseFloat(document.getElementById('run-dist').value) || 0, document.getElementById('run-dist-unit').value);
+}
+// returns array of {name, startM, endM, lenM}
+function segmentBounds() {
+  const total = totalDistanceMeters();
+  const u = runDistUnit();
+  let bounds = [];
+  const equal = (k, label) => { for (let i=0;i<k;i++) bounds.push({ name: label(i,k), startM: total*i/k, endM: total*(i+1)/k }); };
+  if (scheme === 'whole') bounds.push({ name:'Whole Run', startM:0, endM: total });
+  else if (scheme === 'halves') equal(2, i => i===0 ? '1st Half' : '2nd Half');
+  else if (scheme === 'thirds') equal(3, i => ['1st Third','2nd Third','3rd Third'][i]);
+  else if (scheme === 'quarters') equal(4, i => ['Q1','Q2','Q3','Q4'][i]);
+  else if (scheme === 'equal') { const k = Math.max(2, Math.min(40, parseInt(document.getElementById('equal-n').value) || 2)); equal(k, i => `Seg ${i+1}`); }
+  else if (scheme === 'custom') {
+    const raw = document.getElementById('custom-dists').value.split(/[,\s]+/).map(parseFloat).filter(v => isFinite(v) && v > 0);
+    let cursor = 0;
+    raw.forEach((d, i) => { const len = toMeters(d, u); if (cursor + len > total + 0.5) return; bounds.push({ name:`Seg ${i+1}`, startM: cursor, endM: cursor+len }); cursor += len; });
+    if (total - cursor > 1) bounds.push({ name:`Seg ${bounds.length+1}`, startM: cursor, endM: total });
+    if (!bounds.length) bounds.push({ name:'Whole Run', startM:0, endM: total });
+  }
+  else if (scheme === 'laps' && fit) {
+    const { ts } = trimMeters();
+    let idx = 0;
+    fit.laps.forEach(l => { const s = Math.max(0, l.startDist - ts), e = Math.min(total, l.endDist - ts); if (e - s > 5) bounds.push({ name:`Lap ${++idx}`, startM:s, endM:e }); });
+    if (!bounds.length) bounds.push({ name:'Whole Run', startM:0, endM: total });
+  }
+  bounds.forEach(b => b.lenM = b.endM - b.startM);
+  return bounds;
+}
+
+// ═══════════════ MANUAL INPUT TABLE ═══════════════
+let exampleData = null;
+function buildSegmentInputs(preserve=false) {
+  const wrap = document.getElementById('seg-input-wrap');
+  const bounds = segmentBounds();
+  const u = runDistUnit();
+  if (!bounds.length || totalDistanceMeters() <= 0) { wrap.innerHTML = '<div class="status-line err">Enter a run distance (or load a .FIT file) first.</div>'; return; }
+
+  if (source === 'fit') {
+    // Preview only
+    const segs = computeFitSegments(bounds);
+    let html = `<table class="seg-table"><thead><tr><th>Segment</th><th>Distance</th><th>Time</th><th>Pace /${u}</th>${metrics.hr?'<th>Avg HR</th>':''}${metrics.cad?'<th>Stride Rate</th>':''}${metrics.pow?'<th>Power</th>':''}</tr></thead><tbody>`;
+    segs.forEach(s => { html += `<tr><td class="seg-label">${esc(s.name)}</td><td>${n(fromMeters(s.lenM,u),2)} ${u}</td><td>${fmtTime(s.time)}</td><td>${fmtPaceSec(s.time/fromMeters(s.lenM,u))}</td>${metrics.hr?`<td>${n(s.hr,0)}</td>`:''}${metrics.cad?`<td>${n(s.sr,0)}</td>`:''}${metrics.pow?`<td>${n(s.pow,0)}</td>`:''}</tr>`; });
+    html += '</tbody></table><div class="status-line">Preview from the file. Click Analyze Segments for the full breakdown.</div>';
+    wrap.innerHTML = html;
+    return;
+  }
+
+  // preserve previous values when re-rendering
+  const prev = preserve ? readManualInputs(true) : null;
+  const totalSec = (parseInt(document.getElementById('run-hh').value)||0)*3600 + (parseInt(document.getElementById('run-mm').value)||0)*60 + (parseInt(document.getElementById('run-ss').value)||0);
+  const total = totalDistanceMeters();
+  const cs = cadStyle();
+  const cadHead = cs === 'sr' ? 'Stride Rate<br><span style="font-weight:400;text-transform:none;">strikes/min</span>' : 'Cadence<br><span style="font-weight:400;text-transform:none;">cycles/min</span>';
+  let html = `<table class="seg-table"><thead><tr><th>Segment</th><th>Distance</th><th>Segment Time<br><span style="font-weight:400;text-transform:none;">h : m : s</span></th>`;
+  if (metrics.hr) html += '<th>Avg HR<br><span style="font-weight:400;text-transform:none;">bpm</span></th>';
+  if (metrics.cad) html += `<th>${cadHead}</th>`;
+  if (metrics.sl) html += '<th>Stride Length<br><span style="font-weight:400;text-transform:none;">cm, optional measured</span></th>';
+  if (metrics.pow) html += '<th>Power<br><span style="font-weight:400;text-transform:none;">watts</span></th>';
+  if (metrics.gct) html += '<th>GCT<br><span style="font-weight:400;text-transform:none;">ms</span></th>';
+  if (metrics.vo) html += '<th>Vert. Osc.<br><span style="font-weight:400;text-transform:none;">cm</span></th>';
+  html += '</tr></thead><tbody>';
+  bounds.forEach((b, i) => {
+    const p = prev && prev[i] ? prev[i] : {};
+    const ex = exampleData && exampleData[i] ? exampleData[i] : {};
+    const segSec = p.time ?? ex.time ?? (totalSec * b.lenM / total);
+    const h = Math.floor(segSec/3600), m = Math.floor((segSec%3600)/60), s = Math.round(segSec%60);
+    const cadVal = p.cadRaw ?? (ex.sr !== undefined ? (cs==='sr' ? ex.sr : ex.sr/2) : '');
+    html += `<tr><td class="seg-label">${esc(b.name)}</td><td>${n(fromMeters(b.lenM,u), u==='m'?0:2)} ${u}</td>
+      <td><div class="t-in"><input type="number" min="0" id="st-h-${i}" value="${h}"><span>:</span><input type="number" min="0" max="59" id="st-m-${i}" value="${m}"><span>:</span><input type="number" min="0" max="59" id="st-s-${i}" value="${s}"></div></td>`;
+    if (metrics.hr) html += `<td><input type="number" id="hr-${i}" min="0" max="250" value="${p.hr ?? ex.hr ?? ''}" placeholder="bpm"></td>`;
+    if (metrics.cad) html += `<td><input type="number" id="cad-${i}" min="0" step="0.5" value="${cadVal}" placeholder="${cs==='sr'?'e.g. 176':'e.g. 88'}"></td>`;
+    if (metrics.sl) html += `<td><input type="number" id="sl-${i}" min="0" step="1" value="${p.slManual ?? ''}" placeholder="auto"></td>`;
+    if (metrics.pow) html += `<td><input type="number" id="pow-${i}" min="0" value="${p.pow ?? ex.pow ?? ''}" placeholder="W"></td>`;
+    if (metrics.gct) html += `<td><input type="number" id="gct-${i}" min="0" value="${p.gct ?? ex.gct ?? ''}" placeholder="ms"></td>`;
+    if (metrics.vo) html += `<td><input type="number" id="vo-${i}" min="0" step="0.1" value="${p.vo ?? ex.vo ?? ''}" placeholder="cm"></td>`;
+    html += '</tr>';
+  });
+  html += '</tbody></table><div class="status-line">Segment times are pre-filled as even splits from the total time. Overwrite them with the real splits. Leave Stride Length blank to calculate it from pace and stride rate; enter it in cm if your device reports it.</div>';
+  wrap.innerHTML = html;
+  exampleData = null;
+}
+function readManualInputs(raw=false) {
+  const bounds = segmentBounds();
+  const cs = cadStyle();
+  return bounds.map((b, i) => {
+    const g = id => { const el = document.getElementById(`${id}-${i}`); if (!el || el.value === '') return undefined; const v = parseFloat(el.value); return isFinite(v) ? v : undefined; };
+    const hh = document.getElementById(`st-h-${i}`); if (!hh) return null;
+    const time = (parseInt(hh.value)||0)*3600 + (parseInt(document.getElementById(`st-m-${i}`).value)||0)*60 + (parseInt(document.getElementById(`st-s-${i}`).value)||0);
+    const cadRaw = g('cad');
+    const sr = cadRaw === undefined ? undefined : (cs === 'sr' ? cadRaw : cadRaw*2);
+    return { name:b.name, startM:b.startM, endM:b.endM, lenM:b.lenM, time, hr:g('hr'), cadRaw, sr, slManual:g('sl'), pow:g('pow'), gct:g('gct'), vo:g('vo') };
+  });
+}
+function loadExample() {
+  // Example: half marathon with classic late-race fade (illustrative numbers)
+  if (source !== 'manual') switchSource('manual', document.querySelectorAll('#source-toggle button')[0]);
+  document.getElementById('run-dist').value = 13.1; document.getElementById('run-dist-unit').value = 'mi';
+  document.getElementById('run-hh').value = 1; document.getElementById('run-mm').value = 38; document.getElementById('run-ss').value = 20;
+  document.getElementById('cad-style').value = 'sr';
+  ['hr','cad','sl','gct','vo','vor','flight'].forEach(forceMetric);
+  selectScheme('quarters', document.querySelector('[data-scheme="quarters"]'));
+  exampleData = [
+    { time: 23*60+40, hr: 158, sr: 178, gct: 238, vo: 8.4 },
+    { time: 24*60+5,  hr: 163, sr: 177, gct: 242, vo: 8.6 },
+    { time: 24*60+50, hr: 168, sr: 175, gct: 251, vo: 9.1 },
+    { time: 25*60+45, hr: 171, sr: 171, gct: 262, vo: 9.6 },
+  ];
+  buildSegmentInputs();
+  document.getElementById('seg-note').textContent = 'Example loaded (illustrative numbers, not an athlete file). Edit anything and analyze.';
+}
+
+// ═══════════════ FIT PARSER ═══════════════
+const FIT_EPOCH = 631065600; // seconds between Unix epoch and 1989-12-31
+const BASE = { 0x00:[1,'u8'],0x01:[1,'s8'],0x02:[1,'u8'],0x83:[2,'s16'],0x84:[2,'u16'],0x85:[4,'s32'],0x86:[4,'u32'],0x07:[1,'str'],0x88:[4,'f32'],0x89:[8,'f64'],0x0A:[1,'u8'],0x8B:[2,'u16'],0x8C:[4,'u32'],0x0D:[1,'u8'],0x8E:[8,'s64'],0x8F:[8,'u64'],0x90:[8,'u64'] };
+const INVALID = { u8:0xFF, s8:0x7F, u16:0xFFFF, s16:0x7FFF, u32:0xFFFFFFFF, s32:0x7FFFFFFF };
+function readVal(dv, off, type, little) {
+  switch (type) {
+    case 'u8': return dv.getUint8(off); case 's8': return dv.getInt8(off);
+    case 'u16': return dv.getUint16(off, little); case 's16': return dv.getInt16(off, little);
+    case 'u32': return dv.getUint32(off, little); case 's32': return dv.getInt32(off, little);
+    case 'f32': return dv.getFloat32(off, little); case 'f64': return dv.getFloat64(off, little);
+    case 'u64': case 's64': return Number(little ? dv.getBigUint64(off, true) : dv.getBigUint64(off, false));
+    default: return null;
+  }
+}
+function parseFit(buffer) {
+  const dv = new DataView(buffer);
+  const headerSize = dv.getUint8(0);
+  const dataSize = dv.getUint32(4, true);
+  const sig = String.fromCharCode(dv.getUint8(8),dv.getUint8(9),dv.getUint8(10),dv.getUint8(11));
+  if (sig !== '.FIT') throw new Error('Not a FIT file (missing .FIT signature).');
+  let off = headerSize;
+  const end = Math.min(buffer.byteLength, headerSize + dataSize);
+  const defs = {};
+  const devFields = {}; // key `${devIdx}-${fieldNum}` -> {name, units, baseType}
+  const records = [], laps = [], sessions = [];
+  let lastTimestamp = 0;
+
+  while (off < end) {
+    const hdr = dv.getUint8(off); off++;
+    let localType, compressed = false, timeOffset = 0;
+    if (hdr & 0x80) { compressed = true; localType = (hdr >> 5) & 0x03; timeOffset = hdr & 0x1F; }
+    else localType = hdr & 0x0F;
+
+    if (!compressed && (hdr & 0x40)) {
+      // definition message
+      const little = dv.getUint8(off+1) === 0;
+      const globalNum = little ? dv.getUint16(off+2, true) : dv.getUint16(off+2, false);
+      const nFields = dv.getUint8(off+4);
+      off += 5;
+      const fields = [];
+      for (let i=0;i<nFields;i++) { const num = dv.getUint8(off), size = dv.getUint8(off+1), bt = dv.getUint8(off+2); off += 3; fields.push({ num, size, bt, dev:false }); }
+      if (hdr & 0x20) {
+        const nDev = dv.getUint8(off); off++;
+        for (let i=0;i<nDev;i++) { const num = dv.getUint8(off), size = dv.getUint8(off+1), devIdx = dv.getUint8(off+2); off += 3; fields.push({ num, size, devIdx, dev:true }); }
+      }
+      defs[localType] = { little, globalNum, fields, size: fields.reduce((a,f)=>a+f.size,0) };
+      continue;
+    }
+    const def = defs[localType];
+    if (!def) throw new Error('Corrupt FIT file: data message before its definition.');
+    const msg = {}; const dev = {};
+    let p = off;
+    for (const f of def.fields) {
+      if (f.dev) {
+        const meta = devFields[`${f.devIdx}-${f.num}`];
+        if (meta && BASE[meta.bt]) {
+          const [sz, type] = BASE[meta.bt];
+          if (type !== 'str' && f.size === sz) { const v = readVal(dv, p, type, def.little); if (v !== INVALID[type]) dev[meta.name.toLowerCase()] = v; }
+        }
+        p += f.size; continue;
+      }
+      const b = BASE[f.bt];
+      if (!b) { p += f.size; continue; }
+      const [sz, type] = b;
+      if (type === 'str') {
+        let s=''; for (let k=0;k<f.size;k++){ const c = dv.getUint8(p+k); if (!c) break; s += String.fromCharCode(c); } msg[f.num] = s;
+      } else if (f.size === sz) {
+        const v = readVal(dv, p, type, def.little);
+        if (v !== INVALID[type]) msg[f.num] = v;
+      } else if (f.size % sz === 0) {
+        // array field: keep first valid element
+        for (let k=0;k<f.size;k+=sz){ const v = readVal(dv, p+k, type, def.little); if (v !== INVALID[type]) { msg[f.num] = v; break; } }
+      }
+      p += f.size;
+    }
+    off += def.size;
+
+    if (compressed) { lastTimestamp = (lastTimestamp & ~0x1F) + timeOffset + ((timeOffset < (lastTimestamp & 0x1F)) ? 0x20 : 0); msg[253] = lastTimestamp; }
+    else if (msg[253] !== undefined) lastTimestamp = msg[253];
+
+    const g = def.globalNum;
+    if (g === 206) { // field description
+      if (msg[0] !== undefined && msg[1] !== undefined) devFields[`${msg[0]}-${msg[1]}`] = { name: msg[3] || `dev_${msg[1]}`, units: msg[8] || '', bt: msg[2] };
+    } else if (g === 20) { // record
+      const r = { t: msg[253] };
+      if (msg[5] !== undefined) r.d = msg[5] / 100;
+      if (msg[3] !== undefined) r.hr = msg[3];
+      if (msg[4] !== undefined) r.cad = msg[4] + (msg[53] !== undefined ? msg[53]/128 : 0); // FIT cadence = cycles/min (one leg)
+      if (msg[73] !== undefined) r.spd = msg[73] / 1000; else if (msg[6] !== undefined) r.spd = msg[6] / 1000;
+      if (msg[7] !== undefined) r.pow = msg[7];
+      if (msg[39] !== undefined) r.vo = msg[39] / 10 / 10; // mm -> cm
+      if (msg[41] !== undefined) r.gct = msg[41] / 10;      // ms
+      if (msg[40] !== undefined) r.gctPct = msg[40] / 100;
+      if (msg[83] !== undefined) r.vor = msg[83] / 100;
+      if (msg[85] !== undefined) r.sl = msg[85] / 10 / 1000; // mm -> m
+      if (msg[78] !== undefined) r.alt = msg[78]/5 - 500; else if (msg[2] !== undefined) r.alt = msg[2]/5 - 500;
+      // developer power (Stryd etc.)
+      if (r.pow === undefined) { for (const k in dev) { if (/^power$/.test(k) || k === 'running power') { r.pow = dev[k]; break; } } }
+      if (r.gct === undefined && dev['ground time'] !== undefined) r.gct = dev['ground time'];
+      if (r.vo === undefined && dev['vertical oscillation'] !== undefined) r.vo = dev['vertical oscillation'] / 10;
+      if (r.t !== undefined) records.push(r);
+    } else if (g === 19) { // lap
+      laps.push({ start: msg[2], end: msg[253], dist: msg[9] !== undefined ? msg[9]/100 : undefined, timer: msg[8] !== undefined ? msg[8]/1000 : undefined });
+    } else if (g === 18) { // session
+      sessions.push({ dist: msg[9] !== undefined ? msg[9]/100 : undefined, timer: msg[8] !== undefined ? msg[8]/1000 : undefined, elapsed: msg[7] !== undefined ? msg[7]/1000 : undefined, sport: msg[5] });
+    }
+  }
+  // post-process: ensure monotonic distance; fill distance from speed if missing
+  let recs = records.filter(r => r.d !== undefined);
+  if (recs.length < 10 && records.length) {
+    let d = 0; for (let i=0;i<records.length;i++){ if (i>0 && records[i].spd !== undefined) d += records[i].spd * (records[i].t - records[i-1].t); records[i].d = d; } recs = records;
+  }
+  recs.sort((a,b)=>a.t-b.t);
+  if (!recs.length) throw new Error('No distance records found in this file.');
+  const d0 = recs[0].d;
+  recs.forEach(r => r.d -= d0);
+  const totalDist = recs[recs.length-1].d;
+  // lap distance bounds
+  const lapBounds = [];
+  let cursor = 0;
+  laps.forEach(l => { if (l.dist && l.dist > 0) { lapBounds.push({ startDist: cursor, endDist: cursor + l.dist }); cursor += l.dist; } });
+  const has = k => recs.some(r => r[k] !== undefined);
+  return { records: recs, laps: lapBounds, totalDist, totalTime: recs[recs.length-1].t - recs[0].t,
+    sessions, hasFields: { hr: has('hr'), cad: has('cad'), pow: has('pow'), gct: has('gct'), vo: has('vo'), sl: has('sl'), vor: has('vor'), alt: has('alt') } };
+}
+
+function handleFitFiles(files) {
+  if (!files || !files[0]) return;
+  const f = files[0];
+  const status = document.getElementById('fit-status');
+  status.className = 'status-line'; status.textContent = `Reading ${f.name}…`;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      fit = parseFit(e.target.result);
+      const u = document.getElementById('fit-dist-unit').value;
+      status.textContent = `Loaded ${f.name}: ${fit.records.length.toLocaleString()} records, ${fit.laps.length} laps.`;
+      const hf = fit.hasFields;
+      const avail = ['Pace', hf.hr&&'HR', hf.cad&&'Cadence', hf.pow&&'Power', hf.gct&&'GCT', hf.vo&&'Vert. Osc.', hf.sl&&'Stride Length'].filter(Boolean).join(', ');
+      document.getElementById('fit-summary').style.display = 'grid';
+      document.getElementById('fit-summary').innerHTML = `
+        <div class="fit-pill">Distance<b>${n(fromMeters(fit.totalDist,u),2)} ${u}</b></div>
+        <div class="fit-pill">Elapsed Time<b>${fmtTime(fit.totalTime)}</b></div>
+        <div class="fit-pill">Avg Pace<b>${fmtPaceSec(fit.totalTime / fromMeters(fit.totalDist,u))} /${u}</b></div>
+        <div class="fit-pill">Laps in File<b>${fit.laps.length}</b></div>
+        <div class="fit-pill" style="grid-column: 1 / -1;">Metrics found<b style="font-size:0.9rem;">${avail}</b></div>`;
+      // auto-enable metrics present in file
+      ['hr','cad','pow','gct','vo'].forEach(k => { const cb = document.querySelector(`[data-metric="${k}"]`); if (cb) { cb.checked = !!hf[k]; cb.closest('.chip').classList.toggle('on', !!hf[k]); metrics[k] = !!hf[k]; } });
+      if (hf.cad) forceMetric('sl');
+      if (hf.vo && hf.cad) forceMetric('vor');
+      if (hf.gct && hf.cad) forceMetric('flight');
+      document.getElementById('scheme-laps').disabled = !(fit.laps.length > 1);
+      buildSegmentInputs();
+    } catch (err) {
+      fit = null; status.className = 'status-line err'; status.textContent = 'Could not read this file: ' + err.message;
+      document.getElementById('fit-summary').style.display = 'none';
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+// drag & drop
+(function(){ const dz = document.getElementById('drop-zone');
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', e => handleFitFiles(e.dataTransfer.files));
+})();
+
+// time at a given cumulative distance, linear interpolation
+function timeAtDistance(recs, dist) {
+  if (dist <= recs[0].d) return recs[0].t;
+  for (let i=1;i<recs.length;i++) {
+    if (recs[i].d >= dist) { const a = recs[i-1], b = recs[i]; if (b.d === a.d) return b.t; return a.t + (b.t - a.t) * (dist - a.d) / (b.d - a.d); }
+  }
+  return recs[recs.length-1].t;
+}
+function computeFitSegments(bounds) {
+  const u = document.getElementById('fit-dist-unit').value;
+  const { ts } = trimMeters();
+  const recs = fit.records;
+  return bounds.map(b => {
+    const s = b.startM + ts, e = b.endM + ts;
+    const t0 = timeAtDistance(recs, s), t1 = timeAtDistance(recs, e);
+    const inSeg = recs.filter(r => r.d > s && r.d <= e);
+    const avg = k => { const v = inSeg.map(r => r[k]).filter(x => x !== undefined && x > 0); return v.length ? v.reduce((a,c)=>a+c,0)/v.length : undefined; };
+    const cad = avg('cad');
+    let gain = 0, loss = 0;
+    for (let i=1;i<inSeg.length;i++){ if (inSeg[i].alt !== undefined && inSeg[i-1].alt !== undefined){ const d = inSeg[i].alt - inSeg[i-1].alt; if (d>0) gain+=d; else loss-=d; } }
+    return { name:b.name, startM:b.startM, endM:b.endM, lenM:b.lenM, time: t1 - t0, hr: avg('hr'), sr: cad !== undefined ? cad*2 : undefined, pow: avg('pow'), gct: avg('gct'), vo: avg('vo'), slManual: (() => { const v = avg('sl'); return v !== undefined ? v * 100 : undefined; })(), gain, loss, n: inSeg.length };
+  });
+}
+
+// ═══════════════ ANALYSIS ═══════════════
+function derive(seg, weightKg) {
+  const d = { ...seg };
+  d.distMi = seg.lenM / MI; d.distKm = seg.lenM / KM;
+  d.speedMs = seg.time > 0 ? seg.lenM / seg.time : NaN;        // m/s
+  d.paceMi = seg.time / d.distMi;  d.paceKm = seg.time / d.distKm;
+  d.mph = d.speedMs * 2.236936;
+  d.cad = seg.sr !== undefined ? seg.sr / 2 : undefined;
+  // stride length (per strike), feet
+  if (seg.slManual !== undefined && seg.slManual > 0) { d.slCm = seg.slManual; d.slSource = 'measured'; }
+  else if (seg.sr > 0 && isFinite(d.speedMs)) { d.slCm = (d.speedMs * 60 / seg.sr) * 100; d.slSource = 'derived'; }
+  d.slM = d.slCm !== undefined ? d.slCm / 100 : undefined;
+  d.slFt = d.slCm !== undefined ? d.slCm / 30.48 : undefined;
+  d.cycleCm = d.slCm !== undefined ? d.slCm * 2 : undefined;
+  d.voCm = seg.vo; d.voIn = seg.vo !== undefined ? seg.vo / 2.54 : undefined;
+  d.vor = (seg.vo !== undefined && d.slM) ? (seg.vo/100) / d.slM * 100 : undefined;
+  if (seg.gct !== undefined && seg.sr > 0) {
+    d.stepMs = 60000 / seg.sr; d.flightMs = Math.max(0, d.stepMs - seg.gct);
+    d.flightPct = d.flightMs / d.stepMs * 100; d.groundPct = 100 - d.flightPct; d.airGround = seg.gct > 0 ? d.flightMs / seg.gct : undefined;
+  }
+  d.ef = (seg.hr > 0 && isFinite(d.speedMs)) ? (d.speedMs * 60) / seg.hr : undefined; // m/min per bpm
+  if (seg.pow !== undefined && weightKg > 0) { d.wkg = seg.pow / weightKg; d.re = isFinite(d.speedMs) ? d.speedMs / d.wkg : undefined; }
+  return d;
+}
+function weightKg() {
+  const w = parseFloat(document.getElementById(source==='fit'?'weight-fit':'weight').value);
+  const unit = document.getElementById(source==='fit'?'weight-unit-fit':'weight-unit').value;
+  if (!isFinite(w) || w <= 0) return 0; return unit === 'lb' ? w * 0.45359237 : w;
+}
+
+// metric column definitions: key, label, formatter, direction (+1 = increase is "bad/red", -1 = increase is good/green, 0 = neutral), requires
+const COLS = [
+  { key:'paceMi', label:'Pace /mi (+ = faster)', fmt:v=>fmtPaceSec(v), dir:-1, pctKey:'mph', req:()=>true, chart:true },
+  { key:'paceKm', label:'Pace /km', fmt:v=>fmtPaceSec(v), dir:-1, pctKey:'mph', req:()=>true, noPct:true },
+  { key:'mph', label:'Speed mph', fmt:v=>n(v,2), dir:-1, req:()=>true, noPct:true },
+  { key:'hr', label:'Avg HR', fmt:v=>n(v,0)+' bpm', dir:+1, req:()=>metrics.hr },
+  { key:'ef', label:'Efficiency Factor', fmt:v=>n(v,2), dir:-1, req:()=>metrics.hr, help:'m/min ÷ bpm' },
+  { key:'sr', label:'Stride Rate', fmt:v=>n(v,1)+' /min', dir:-1, req:()=>metrics.cad },
+  { key:'cad', label:'Cadence', fmt:v=>n(v,1)+' cyc/min', dir:-1, req:()=>metrics.cad, noPct:true },
+  { key:'slCm', label:'Stride Length', fmt:(v,d)=>`${n(v,0)} cm (${n(d.slFt,2)} ft)${d.slSource==='measured'?' ●':''}`, dir:-1, req:()=>metrics.sl },
+  { key:'cycleCm', label:'Cycle Length', fmt:(v,d)=>`${n(v,0)} cm (${n(v/30.48,2)} ft)`, dir:-1, req:()=>metrics.sl, noPct:true },
+  { key:'pow', label:'Power', fmt:(v,d)=>`${n(v,0)} W${d.wkg?` (${n(d.wkg,2)} W/kg)`:''}`, dir:0, req:()=>metrics.pow },
+  { key:'re', label:'Run Effectiveness', fmt:v=>n(v,3), dir:-1, req:()=>metrics.pow && weightKg()>0, help:'m/s ÷ W/kg' },
+  { key:'gct', label:'GCT', fmt:v=>n(v,0)+' ms', dir:+1, req:()=>metrics.gct },
+  { key:'voIn', label:'Vert. Osc.', fmt:(v,d)=>`${n(v,2)} in (${n(d.voCm,1)} cm)`, dir:+1, req:()=>metrics.vo },
+  { key:'vor', label:'Vert. Ratio', fmt:v=>n(v,1)+'%', dir:+1, req:()=>metrics.vor },
+  { key:'flightPct', label:'Flight %', fmt:(v,d)=>`${n(v,1)}% (air:ground ${n(d.airGround,2)})`, dir:-1, req:()=>metrics.flight },
+];
+
+function deltaHtml(cur, prev, first, dir) {
+  const p1 = pct(cur, prev), p2 = pct(cur, first);
+  const cls = p => { if (p === null) return 'flat'; if (Math.abs(p) < 0.05) return 'flat'; if (dir === 0) return 'neutral-up'; return (p > 0) === (dir > 0) ? 'up' : 'down'; };
+  const f = p => p === null ? '—' : (p > 0 ? '+' : '') + p.toFixed(1) + '%';
+  if (p1 === null && p2 === null) return '';
+  return `<span class="delta ${cls(p1)}">${f(p1)} <span style="opacity:0.7;">[${f(p2)}]</span></span>`;
+}
+
+function analyze() {
+  const err = document.getElementById('analyze-err'); err.textContent = '';
+  let segs;
+  if (source === 'fit') {
+    if (!fit) { err.textContent = 'Load a .FIT file first.'; return; }
+    segs = computeFitSegments(segmentBounds());
+  } else {
+    if (!document.getElementById('seg-input-wrap').querySelector('table')) buildSegmentInputs();
+    segs = readManualInputs();
+    if (!segs || segs.some(s => !s)) { err.textContent = 'Build the segment table first.'; return; }
+    if (segs.some(s => !(s.time > 0))) { err.textContent = 'Every segment needs a time greater than zero.'; return; }
+  }
+  const wkg = weightKg();
+  const D = segs.map(s => derive(s, wkg));
+  lastSegments = D;
+  const u = runDistUnit();
+  const cols = COLS.filter(c => c.req());
+
+  // ── whole-run totals
+  const totalM = D.reduce((a,s)=>a+s.lenM,0), totalT = D.reduce((a,s)=>a+s.time,0);
+  const wavg = k => { let num=0, den=0; D.forEach(s => { if (s[k] !== undefined && isFinite(s[k])) { num += s[k]*s.time; den += s.time; } }); return den ? num/den : undefined; };
+  const whole = derive({ name:'Whole Run', lenM: totalM, time: totalT, hr: wavg('hr'), sr: wavg('sr'), pow: wavg('pow'), gct: wavg('gct'), vo: wavg('vo'), slManual: D.every(s=>s.slSource==='measured') ? wavg('slCm') : undefined }, wkg);
+
+  // ── summary tiles
+  const first = D[0], last = D[D.length-1];
+  const tiles = [];
+  tiles.push({ label:'Total Distance', value:`${n(fromMeters(totalM,u),2)} ${u}`, detail: u==='mi' ? `${n(totalM/1000,2)} km` : `${n(totalM/MI,2)} mi` });
+  tiles.push({ label:'Total Time', value: fmtTime(totalT), detail: `${D.length} segment${D.length>1?'s':''}` });
+  tiles.push({ label:'Average Pace', value: `${fmtPaceSec(whole.paceMi)} /mi`, detail: `${fmtPaceSec(whole.paceKm)} /km · ${n(whole.mph,2)} mph` });
+  const paceFade = pct(last.mph, first.mph); // + = faster
+  if (D.length > 1) tiles.push({ label:'Pace: First → Last (+ = faster)', value: (paceFade>0?'+':'')+n(paceFade,1)+'%', detail: `${fmtPaceSec(first.paceMi)} → ${fmtPaceSec(last.paceMi)} /mi · ${paceFade < -0.05 ? 'slower' : paceFade > 0.05 ? 'faster' : 'even'}`, cls: paceFade < -3 ? 'alert' : paceFade < -1 ? 'warn' : 'good' });
+  if (metrics.hr && whole.hr) tiles.push({ label:'Average HR', value: `${n(whole.hr,0)} bpm`, detail: D.length>1 ? `${n(first.hr,0)} → ${n(last.hr,0)} (${fmtPct(pct(last.hr, first.hr))})` : '' });
+  if (metrics.hr && D.length > 1 && first.ef && last.ef) { const dec = -pct(last.ef, first.ef); tiles.push({ label:'Pace:HR Decoupling', value: fmtPct(dec), detail:'EF loss first → last segment', cls: dec > 5 ? 'alert' : dec > 3 ? 'warn' : 'good' }); }
+  if (metrics.cad && whole.sr) tiles.push({ label:'Stride Rate / Cadence', value: `${n(whole.sr,0)} / ${n(whole.cad,0)}`, detail: D.length>1 ? `strikes/min: ${n(first.sr,0)} → ${n(last.sr,0)} (${fmtPct(pct(last.sr, first.sr))})` : 'strikes/min / cycles/min' });
+  if (metrics.sl && whole.slCm) tiles.push({ label:'Stride Length', value: `${n(whole.slCm,0)} cm`, detail: `${n(whole.slFt,2)} ft` + (D.length>1 ? ` · ${fmtPct(pct(last.slCm, first.slCm))} first → last` : '') });
+  if (metrics.pow && whole.pow) tiles.push({ label:'Average Power', value: `${n(whole.pow,0)} W`, detail: whole.wkg ? `${n(whole.wkg,2)} W/kg · RE ${n(whole.re,3)}` : 'Add weight for W/kg' });
+  if (metrics.gct && whole.gct) tiles.push({ label:'Ground Contact', value: `${n(whole.gct,0)} ms`, detail: D.length>1 ? `${n(first.gct,0)} → ${n(last.gct,0)} (${fmtPct(pct(last.gct, first.gct))})` : '' });
+  if (metrics.vo && whole.voIn) tiles.push({ label:'Vertical Oscillation', value: `${n(whole.voIn,2)} in`, detail: `${n(whole.voCm,1)} cm` + (D.length>1 ? ` · ${fmtPct(pct(last.voCm, first.voCm))}` : '') });
+  if (metrics.vor && whole.vor) tiles.push({ label:'Vertical Ratio', value: `${n(whole.vor,1)}%`, detail: D.length>1 ? `${n(first.vor,1)}% → ${n(last.vor,1)}%` : '' });
+  if (metrics.flight && whole.flightPct !== undefined) tiles.push({ label:'Flight Phase', value: `${n(whole.flightPct,1)}%`, detail: `air:ground ${n(whole.airGround,2)}` + (D.length>1 ? ` · ${n(first.flightPct,1)}% → ${n(last.flightPct,1)}%` : '') });
+  document.getElementById('summary-tiles').innerHTML = tiles.map(t => `<div class="result-box ${t.cls||''}"><div class="result-label">${t.label}</div><div class="result-value">${t.value}</div><div class="result-detail">${t.detail||''}</div></div>`).join('');
+
+  // ── results table
+  let html = `<thead><tr><th>Segment</th><th>Distance</th><th>Time</th>${cols.map(c=>`<th title="${c.help||''}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
+  D.forEach((s, i) => {
+    const prev = i > 0 ? D[i-1] : null;
+    html += `<tr><td class="seg-name">${esc(s.name)}</td><td>${n(fromMeters(s.lenM,u), u==='m'?0:2)} ${u}<span class="delta flat">${n(s.startM/ (u==='mi'?MI:KM),1)}–${n(s.endM/(u==='mi'?MI:KM),1)}</span></td><td>${fmtTime(s.time)}</td>`;
+    cols.forEach(c => { const v = s[c.key]; html += `<td>${v === undefined || !isFinite(v) ? '—' : c.fmt(v, s)}${(prev && i>0) ? deltaHtml(s[c.pctKey||c.key], prev[c.pctKey||c.key], D[0][c.pctKey||c.key], c.dir) : ''}</td>`; });
+    html += '</tr>';
+  });
+  html += `<tr class="total-row"><td class="seg-name">Whole Run</td><td>${n(fromMeters(totalM,u),2)} ${u}</td><td>${fmtTime(totalT)}</td>${cols.map(c => `<td>${whole[c.key]===undefined||!isFinite(whole[c.key])?'—':c.fmt(whole[c.key], whole)}</td>`).join('')}</tr></tbody>`;
+  document.getElementById('results-table').innerHTML = html;
+
+  // ── pct matrix
+  const pcols = cols.filter(c => !c.noPct);
+  let ph = `<thead><tr><th>Metric</th>${D.map(s=>`<th>${esc(s.name)}</th>`).join('')}${D.length>2?'<th>1st Half → 2nd Half</th>':''}</tr></thead><tbody>`;
+  const halfPct = key => { // time-weighted halves by distance
+    const half = totalM/2; let a=[0,0], b=[0,0];
+    D.forEach(s => { const v = s[key]; if (v===undefined||!isFinite(v)) return; const inA = Math.max(0, Math.min(s.endM, half) - s.startM), inB = s.lenM - inA; a[0]+=v*inA; a[1]+=inA; b[0]+=v*inB; b[1]+=inB; });
+    if (!a[1]||!b[1]) return null; return pct(b[0]/b[1], a[0]/a[1]);
+  };
+  pcols.forEach(c => {
+    ph += `<tr><td class="seg-name">${c.label}</td>`;
+    D.forEach((s,i) => { const pk = c.pctKey||c.key; const p = i===0 ? 0 : pct(s[pk], D[0][pk]); const cls = p===null?'flat':(Math.abs(p)<0.05?'flat':(c.dir===0?'neutral-up':((p>0)===(c.dir>0)?'up':'down'))); ph += `<td><span class="delta ${cls}" style="font-size:0.9rem;">${p===null?'—':(i===0?'baseline':fmtPct(p))}</span></td>`; });
+    if (D.length>2) { const hp = halfPct(c.pctKey||c.key); const cls = hp===null?'flat':(Math.abs(hp)<0.05?'flat':(c.dir===0?'neutral-up':((hp>0)===(c.dir>0)?'up':'down'))); ph += `<td><span class="delta ${cls}" style="font-size:0.9rem;">${hp===null?'—':fmtPct(hp)}</span></td>`; }
+    ph += '</tr>';
+  });
+  ph += '</tbody>';
+  document.getElementById('pct-table').innerHTML = ph;
+
+  buildCharts(D, u);
+  buildCoachRead(D, whole, halfPct);
+
+  ['sec-results','sec-charts','sec-read'].forEach(id => document.getElementById(id).style.display = '');
+  document.getElementById('print-bar').style.display = 'block';
+  initWhatIf(D);
+  const schemeName = { whole:'Whole run', halves:'Halves', thirds:'Thirds', quarters:'Quarters', equal:`${D.length} equal segments`, custom:'Custom distances', laps:'Device laps' }[scheme] || scheme;
+  document.getElementById('print-header').innerHTML = `<strong>Run analyzed:</strong> ${n(fromMeters(totalM,u),2)} ${u} in ${fmtTime(totalT)} · ${schemeName} · ${source==='fit' ? 'from .FIT file' : 'manual entry'} · ${new Date().toLocaleDateString()}`;
+}
+function fmtPct(p) { return p === null || p === undefined || !isFinite(p) ? '—' : (p > 0 ? '+' : '') + p.toFixed(1) + '%'; }
+
+// ═══════════════ WHAT-IF ═══════════════
+let wi = { cad: [], sl: [] };
+function setMaster(kind, v) {
+  v = parseFloat(v);
+  document.getElementById('wi-'+kind+'-val').textContent = (v>0?'+':'') + v.toFixed(1) + '%';
+  if (lastSegments) { wi[kind] = lastSegments.map(() => v); renderWhatIf(); }
+}
+function setSegWI(kind, i, v) { wi[kind][i] = parseFloat(v); renderWhatIf(); }
+function clampWI(v) { return Math.max(-10, Math.min(10, Math.round(v*2)/2)); }
+function stepMaster(kind, d) { const el = document.getElementById('wi-'+kind); el.value = clampWI(parseFloat(el.value) + d); setMaster(kind, el.value); }
+function stepSeg(kind, i, d) { wi[kind][i] = clampWI((wi[kind][i] || 0) + d); renderWhatIf(); }
+function resetWhatIf() {
+  ['cad','sl'].forEach(k => { document.getElementById('wi-'+k).value = 0; document.getElementById('wi-'+k+'-val').textContent = '0.0%'; wi[k] = lastSegments ? lastSegments.map(()=>0) : []; });
+  renderWhatIf();
+}
+function initWhatIf(D) {
+  wi = { cad: D.map(()=>0), sl: D.map(()=>0) };
+  ['cad','sl'].forEach(k => { document.getElementById('wi-'+k).value = 0; document.getElementById('wi-'+k+'-val').textContent = '0.0%'; });
+  document.getElementById('sec-whatif').style.display = '';
+  renderWhatIf();
+}
+function renderWhatIf() {
+  const D = lastSegments; if (!D) return;
+  const u = runDistUnit();
+  const perUnit = u === 'km' ? KM : MI;
+  document.getElementById('wi-unit').textContent = u === 'km' ? 'km' : 'mi';
+  const f = (v, d=1) => (v>0?'+':'') + v.toFixed(d) + '%';
+  const dCls = v => Math.abs(v) < 0.05 ? 'flat' : (v > 0 ? 'up' : 'down');       // for time: + = slower (red)
+  const sCls = v => Math.abs(v) < 0.05 ? 'flat' : (v > 0 ? 'down' : 'up');       // for speed: + = faster (green)
+  const fmtSigned = sec => (sec > 0 ? '+' : sec < 0 ? '-' : '') + fmtTime(Math.abs(sec));
+  const hasSR = D.some(s => s.sr), hasSL = D.some(s => s.slCm);
+  let html = `<thead><tr><th>Segment</th><th>Cadence adj.</th><th>Stride length adj.</th><th>Speed Δ</th>${hasSR?'<th>Stride Rate</th>':''}${hasSL?'<th>Stride Length</th>':''}<th>Pace /${u}</th><th>Segment Time</th><th>Time Δ</th></tr></thead><tbody>`;
+  let origTotal = 0, newTotal = 0, totalM = 0;
+  D.forEach((s, i) => {
+    const c = wi.cad[i] || 0, l = wi.sl[i] || 0;
+    const mult = (1 + c/100) * (1 + l/100);
+    const speedPct = (mult - 1) * 100;
+    const newTime = s.time / mult;
+    const distU = s.lenM / perUnit;
+    const pace0 = s.time / distU, pace1 = newTime / distU;
+    origTotal += s.time; newTotal += newTime; totalM += s.lenM;
+    html += `<tr><td class="seg-name">${esc(s.name)}<span class="delta flat">${n(distU,2)} ${u}</span></td>
+      <td><span class="seg-slider"><button class="step-btn sm" type="button" onclick="stepSeg('cad', ${i}, -0.5)">&#9664;</button><input type="range" min="-10" max="10" step="0.5" value="${c}" oninput="setSegWI('cad', ${i}, this.value)"><button class="step-btn sm" type="button" onclick="stepSeg('cad', ${i}, 0.5)">&#9654;</button></span> <span class="mini-val">${f(c)}</span></td>
+      <td><span class="seg-slider"><button class="step-btn sm" type="button" onclick="stepSeg('sl', ${i}, -0.5)">&#9664;</button><input type="range" min="-10" max="10" step="0.5" value="${l}" oninput="setSegWI('sl', ${i}, this.value)"><button class="step-btn sm" type="button" onclick="stepSeg('sl', ${i}, 0.5)">&#9654;</button></span> <span class="mini-val">${f(l)}</span></td>
+      <td><span class="delta ${sCls(speedPct)}" style="font-size:0.95rem;">${f(speedPct)}</span></td>`;
+    if (hasSR) html += `<td>${s.sr ? `${n(s.sr,0)} → <b>${n(s.sr*(1+c/100),0)}</b> /min` : '—'}</td>`;
+    if (hasSL) html += `<td>${s.slCm ? `${n(s.slCm,0)} → <b>${n(s.slCm*(1+l/100),0)}</b> cm` : '—'}</td>`;
+    html += `<td>${fmtPaceSec(pace0)} → <b>${fmtPaceSec(pace1)}</b><span class="delta ${sCls(speedPct)}">${f(speedPct)} pace</span></td>
+      <td>${fmtTime(s.time)} → <b>${fmtTime(newTime)}</b></td>
+      <td><span class="delta ${dCls(newTime - s.time)}" style="font-size:0.95rem;">${fmtSigned(newTime - s.time)}</span></td></tr>`;
+  });
+  const distU = totalM / perUnit;
+  const totPct = (newTotal / origTotal - 1) * 100;
+  html += `<tr class="total-row"><td class="seg-name">Whole Run</td><td colspan="2"></td><td><span class="delta ${sCls(-totPct)}" style="font-size:0.95rem;">${f(origTotal/newTotal*100-100)}</span></td>${hasSR?'<td></td>':''}${hasSL?'<td></td>':''}
+    <td>${fmtPaceSec(origTotal/distU)} → <b>${fmtPaceSec(newTotal/distU)}</b></td><td>${fmtTime(origTotal)} → <b>${fmtTime(newTotal)}</b></td><td><span class="delta ${dCls(newTotal-origTotal)}" style="font-size:0.95rem;">${fmtSigned(newTotal-origTotal)} (${f(totPct)})</span></td></tr></tbody>`;
+  document.getElementById('wi-table').innerHTML = html;
+  const saved = origTotal - newTotal;
+  document.getElementById('wi-tiles').innerHTML = `
+    <div class="result-box"><div class="result-label">Original Time</div><div class="result-value">${fmtTime(origTotal)}</div><div class="result-detail">${fmtPaceSec(origTotal/distU)} /${u} average</div></div>
+    <div class="result-box ${saved > 0.5 ? 'good' : saved < -0.5 ? 'alert' : ''}"><div class="result-label">Adjusted Time</div><div class="result-value">${fmtTime(newTotal)}</div><div class="result-detail">${fmtPaceSec(newTotal/distU)} /${u} average</div></div>
+    <div class="result-box ${saved > 0.5 ? 'good' : saved < -0.5 ? 'alert' : ''}"><div class="result-label">Time ${saved >= 0 ? 'Saved' : 'Added'}</div><div class="result-value">${fmtTime(Math.abs(saved))}</div><div class="result-detail">${f(totPct)} total time · ${f(origTotal/newTotal*100-100)} average speed</div></div>`;
+}
+
+// ═══════════════ CHARTS ═══════════════
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function buildCharts(D, u) {
+  charts.forEach(c => c.destroy()); charts = [];
+  const grid = document.getElementById('chart-grid'); grid.innerHTML = '';
+  if (typeof Chart === 'undefined') { grid.innerHTML = '<div class="status-line err">Charts could not load (Chart.js unavailable). Tables above are complete.</div>'; return; }
+  const labels = D.map(s => s.name);
+  const textColor = cssVar('--text'), gridColor = cssVar('--c-grid');
+  Chart.defaults.color = textColor; Chart.defaults.font.family = "'Source Sans 3', sans-serif";
+  const paceKey = u === 'km' ? 'paceKm' : 'paceMi';
+  const paceLabel = u === 'km' ? 'Pace /km' : 'Pace /mi';
+  const hasAny = k => D.some(s => s[k] !== undefined && isFinite(s[k]));
+
+  const addChart = (title, sub, datasets, yOpts, wide=false) => {
+    const card = document.createElement('div'); card.className = 'chart-card' + (wide?' wide':'');
+    card.innerHTML = `<h3>${title}</h3><div class="chart-sub">${sub}</div><div class="chart-box"><canvas></canvas></div>`;
+    grid.appendChild(card);
+    const scales = { x: { grid: { color: gridColor }, ticks: { color: textColor } } };
+    Object.assign(scales, yOpts);
+    const ch = new Chart(card.querySelector('canvas'), { type:'line', data:{ labels, datasets }, options: {
+      responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ labels:{ color:textColor, boxWidth:12 } }, tooltip:{ callbacks:{ label: ctx => { const ds = ctx.dataset; const v = ctx.parsed.y; return `${ds.label}: ${ds.fmt ? ds.fmt(v) : n(v,1)}`; } } } },
+      scales } });
+    charts.push(ch);
+  };
+  const line = (label, key, color, axis='y', fmt) => ({ label, data: D.map(s => s[key] !== undefined && isFinite(s[key]) ? +s[key] : null), borderColor: color, backgroundColor: color + '33', fill:false, tension:0.25, pointRadius:5, pointHoverRadius:7, borderWidth:2.5, yAxisID: axis, fmt, spanGaps:true });
+  const yAxis = (pos, title, color, extra={}) => ({ position: pos, title:{ display:true, text:title, color }, grid:{ color: pos==='left' ? gridColor : 'transparent' }, ticks:{ color }, ...extra });
+  const paceTicks = { callback: v => fmtPaceSec(v) };
+
+  // 1. Pace vs HR
+  const ds1 = [line(paceLabel, paceKey, cssVar('--c-pace'), 'y', fmtPaceSec)];
+  const sc1 = { y: yAxis('left', paceLabel + ' (faster ↑)', cssVar('--c-pace'), { reverse:true, ticks:{ color: cssVar('--c-pace'), ...paceTicks } }) };
+  if (metrics.hr && hasAny('hr')) { ds1.push(line('Avg HR (bpm)', 'hr', cssVar('--c-hr'), 'y1', v=>n(v,0)+' bpm')); sc1.y1 = yAxis('right', 'Heart Rate (bpm)', cssVar('--c-hr')); }
+  addChart('Pace vs. Heart Rate', 'Pace axis is inverted so faster is higher. Pace falling while HR climbs = cardiac drift / decoupling.', ds1, sc1, true);
+
+  // 2. Stride length vs stride rate
+  if (metrics.cad && hasAny('sr')) {
+    const ds = [line('Stride Rate (strikes/min)', 'sr', cssVar('--c-cad'), 'y', v=>n(v,1)+' /min')];
+    const sc = { y: yAxis('left', 'Stride Rate (/min)', cssVar('--c-cad')) };
+    if (metrics.sl && hasAny('slCm')) { ds.push(line('Stride Length (cm)', 'slCm', cssVar('--c-sl'), 'y1', v=>`${n(v,0)} cm (${n(v/30.48,2)} ft)`)); sc.y1 = yAxis('right', 'Stride Length (cm)', cssVar('--c-sl')); }
+    addChart('Stride Rate vs. Stride Length', 'Speed = stride rate × stride length. Which one is carrying the pace change?', ds, sc);
+  }
+  // 3. GCT vs VO
+  if ((metrics.gct && hasAny('gct')) || (metrics.vo && hasAny('voCm'))) {
+    const ds = [], sc = {};
+    if (metrics.gct && hasAny('gct')) { ds.push(line('GCT (ms)', 'gct', cssVar('--c-gct'), 'y', v=>n(v,0)+' ms')); sc.y = yAxis('left','Ground Contact (ms)', cssVar('--c-gct')); }
+    if (metrics.vo && hasAny('voCm')) { ds.push(line('Vertical Osc. (cm)', 'voCm', cssVar('--c-vo'), sc.y?'y1':'y', v=>`${n(v/2.54,2)} in (${n(v,1)} cm)`)); sc[sc.y?'y1':'y'] = yAxis(sc.y?'right':'left','Vertical Oscillation (cm)', cssVar('--c-vo')); }
+    addChart('Ground Contact vs. Vertical Oscillation', 'Both rising together through the run is the classic fatigue signature: more time on the ground, more bounce.', ds, sc);
+  }
+  // 4. Flight % vs VOR
+  if ((metrics.flight && hasAny('flightPct')) || (metrics.vor && hasAny('vor'))) {
+    const ds = [], sc = {};
+    if (metrics.flight && hasAny('flightPct')) { ds.push(line('Flight Phase (%)', 'flightPct', cssVar('--c-flight'), 'y', v=>n(v,1)+'%')); sc.y = yAxis('left','Flight Phase (%)', cssVar('--c-flight')); }
+    if (metrics.vor && hasAny('vor')) { ds.push(line('Vertical Ratio (%)', 'vor', cssVar('--c-vor'), sc.y?'y1':'y', v=>n(v,1)+'%')); sc[sc.y?'y1':'y'] = yAxis(sc.y?'right':'left','Vertical Ratio (%)', cssVar('--c-vor')); }
+    addChart('Flight Phase vs. Vertical Ratio', 'Efficient running keeps flight % up and vertical ratio down as the run goes on.', ds, sc);
+  }
+  // 5. Power vs pace
+  if (metrics.pow && hasAny('pow')) {
+    const ds = [line('Power (W)', 'pow', cssVar('--c-pow'), 'y', v=>n(v,0)+' W'), line(paceLabel, paceKey, cssVar('--c-pace'), 'y1', fmtPaceSec)];
+    const sc = { y: yAxis('left','Power (W)', cssVar('--c-pow')), y1: yAxis('right', paceLabel + ' (faster ↑)', cssVar('--c-pace'), { reverse:true, ticks:{ color: cssVar('--c-pace'), ...paceTicks } }) };
+    addChart('Power vs. Pace', 'Pace falling at the same power means running effectiveness dropped (form cost went up).', ds, sc);
+  }
+  // 6. Efficiency factor
+  if (metrics.hr && hasAny('ef')) {
+    const ds = [line('Efficiency Factor (m/min ÷ bpm)', 'ef', cssVar('--c-hr'), 'y', v=>n(v,2))];
+    addChart('Aerobic Efficiency Factor', 'Speed per heartbeat. A steady line is a well-coupled aerobic run; a falling line is decoupling.', ds, { y: yAxis('left','EF', cssVar('--c-hr')) });
+  }
+  // 7. All % changes
+  const pctSeries = [];
+  const addPct = (label, key, color) => { if (hasAny(key)) pctSeries.push({ label, data: D.map(s => (s[key]!==undefined && isFinite(s[key]) && D[0][key]) ? pct(s[key], D[0][key]) : null), borderColor: color, backgroundColor: color+'33', tension:0.25, pointRadius:4, borderWidth:2, fmt:fmtPct, spanGaps:true }); };
+  addPct('Pace (+ = faster)', 'mph', cssVar('--c-pace'));
+  if (metrics.hr) addPct('Heart Rate', 'hr', cssVar('--c-hr'));
+  if (metrics.cad) addPct('Stride Rate', 'sr', cssVar('--c-cad'));
+  if (metrics.sl) addPct('Stride Length', 'slCm', cssVar('--c-sl'));
+  if (metrics.gct) addPct('GCT', 'gct', cssVar('--c-gct'));
+  if (metrics.vo) addPct('Vertical Osc.', 'voCm', cssVar('--c-vo'));
+  if (metrics.pow) addPct('Power', 'pow', cssVar('--c-pow'));
+  if (metrics.flight) addPct('Flight %', 'flightPct', cssVar('--c-flight'));
+  if (D.length > 1) addChart('Percent Change from Segment 1', 'Every tracked metric on one axis, relative to the first segment.', pctSeries, { y: yAxis('left','% change vs. segment 1', textColor, { ticks:{ color:textColor, callback: v => (v>0?'+':'')+v+'%' } }) }, true);
+}
+
+// ═══════════════ COACH'S READ ═══════════════
+function buildCoachRead(D, whole, halfPct) {
+  const el = document.getElementById('coach-read');
+  if (D.length < 2) { el.innerHTML = '<div class="info-callout">Pick a split with two or more segments to see segment-to-segment interpretation. Whole-run averages are in the tiles above.</div>'; return; }
+  const first = D[0], last = D[D.length-1];
+  const notes = [];
+  const paceP = pct(last.mph, first.mph); // + = faster
+  const halfPace = halfPct('mph');
+  const hrP = metrics.hr ? pct(last.hr, first.hr) : null;
+  const srP = metrics.cad ? pct(last.sr, first.sr) : null;
+  const slP = metrics.sl ? pct(last.slCm, first.slCm) : null;
+  const gctP = metrics.gct ? pct(last.gct, first.gct) : null;
+  const voP = metrics.vo ? pct(last.voCm, first.voCm) : null;
+  const vorP = metrics.vor ? pct(last.vor, first.vor) : null;
+  const flP = metrics.flight ? pct(last.flightPct, first.flightPct) : null;
+  const efP = metrics.hr && first.ef && last.ef ? pct(last.ef, first.ef) : null;
+  const powP = metrics.pow ? pct(last.pow, first.pow) : null;
+
+  // pacing
+  let pacingCls = 'good', pacing;
+  if (paceP === null) pacing = '';
+  else if (paceP < -5) { pacingCls = 'alert'; pacing = `<strong>Pacing: significant fade.</strong> Pace changed ${fmtPct(paceP)} from the first segment to the last (${fmtPaceSec(first.paceMi)} → ${fmtPaceSec(last.paceMi)} /mi)${halfPace!==null?`, and the second half ran ${fmtPct(halfPace)} vs. the first`:''}. That is more than normal race fade; look at the opening pace relative to current fitness, fueling, heat and durability.`; }
+  else if (paceP < -1.5) { pacingCls = 'warn'; pacing = `<strong>Pacing: moderate fade.</strong> Pace changed ${fmtPct(paceP)} first to last segment${halfPace!==null?` (second half ${fmtPct(halfPace)} vs. first)`:''}. Common in long-course racing, but worth checking against the HR and mechanics drift below to see where the slowdown came from.`; }
+  else if (paceP > 1.5) { pacing = `<strong>Pacing: negative split.</strong> The last segment was ${fmtPct(paceP)} faster than the first${halfPace!==null?` (second half ${fmtPct(halfPace)} vs. first)`:''}. If HR stayed controlled, the athlete had more to give early; if HR spiked, it was a well-timed finish.`; }
+  else pacing = `<strong>Pacing: even.</strong> Pace changed only ${fmtPct(paceP)} across the run${halfPace!==null?` (second half ${fmtPct(halfPace)} vs. first)`:''}. Even pacing is the goal for most run legs. Check whether it was held at a stable cost or a rising one below.`;
+  if (pacing) notes.push({ cls: pacingCls, html: pacing });
+
+  // HR / decoupling
+  if (hrP !== null && efP !== null) {
+    const dec = -efP;
+    let cls = dec > 5 ? 'alert' : dec > 3 ? 'warn' : 'good';
+    notes.push({ cls, html: `<strong>Heart rate and aerobic coupling.</strong> HR moved ${fmtPct(hrP)} (${n(first.hr,0)} → ${n(last.hr,0)} bpm) while pace moved ${fmtPct(paceP)}. Efficiency factor (speed per heartbeat) changed ${fmtPct(efP)}, a decoupling of ${n(dec,1)}%. ${dec > 5 ? 'Above 5% points to aerobic durability, heat, dehydration or fueling as the limiter rather than mechanics alone.' : dec > 3 ? 'Mild drift; typical for a hard race effort, acceptable for a long aerobic run.' : 'Well-coupled: the athlete held pace without the cardiovascular cost running away.'}` });
+  } else if (hrP !== null) {
+    notes.push({ cls:'good', html:`<strong>Heart rate.</strong> HR moved ${fmtPct(hrP)} (${n(first.hr,0)} → ${n(last.hr,0)} bpm) across the run.` });
+  }
+
+  // stride mechanics: speed ≈ SR × SL
+  if (srP !== null && slP !== null) {
+    const driver = Math.abs(slP) >= Math.abs(srP) ? 'stride length' : 'stride rate';
+    let cls = (slP < -3 || srP < -3) ? 'warn' : 'good';
+    let txt = `<strong>What drove the pace change: stride rate or stride length?</strong> Stride rate ${fmtPct(srP)} (${n(first.sr,0)} → ${n(last.sr,0)} strikes/min; cadence ${n(first.cad,0)} → ${n(last.cad,0)} cycles/min). Stride length ${fmtPct(slP)} (${n(first.slCm,0)} → ${n(last.slCm,0)} cm, ${n(first.slFt,2)} → ${n(last.slFt,2)} ft). The bigger mover was <strong>${driver}</strong>. `;
+    if (slP < -3 && srP > -1) txt += 'This is the classic fatigue pattern: cadence held but each step got shorter. Strength endurance, hip extension and posterior-chain work are the usual fixes.';
+    else if (srP < -3) txt += 'Cadence dropped late. That is usually neuromuscular fatigue or loss of focus; cadence cues, strides and shorter quicker steps late in long runs help.';
+    else if (slP < -3 && srP < -3) { txt += 'Both shortened and slowed, a general fatigue signature. Look at overall durability and pacing before chasing form fixes.'; cls = 'alert'; }
+    else txt += 'Mechanics held together well through the run.';
+    notes.push({ cls, html: txt });
+  }
+
+  // GCT / VO / VOR / Flight
+  if (gctP !== null || voP !== null || vorP !== null || flP !== null) {
+    const parts = [];
+    if (gctP !== null) parts.push(`ground contact ${fmtPct(gctP)} (${n(first.gct,0)} → ${n(last.gct,0)} ms)`);
+    if (voP !== null) parts.push(`vertical oscillation ${fmtPct(voP)} (${n(first.voIn,2)} → ${n(last.voIn,2)} in / ${n(first.voCm,1)} → ${n(last.voCm,1)} cm)`);
+    if (vorP !== null) parts.push(`vertical ratio ${fmtPct(vorP)} (${n(first.vor,1)}% → ${n(last.vor,1)}%)`);
+    if (flP !== null) parts.push(`flight phase ${fmtPct(flP)} (${n(first.flightPct,1)}% → ${n(last.flightPct,1)}%)`);
+    const bad = (gctP !== null && gctP > 4) || (vorP !== null && vorP > 6) || (flP !== null && flP < -8);
+    const mild = (gctP !== null && gctP > 2) || (vorP !== null && vorP > 3) || (flP !== null && flP < -4);
+    let txt = `<strong>Ground contact, bounce and flight.</strong> First to last segment: ${parts.join('; ')}. `;
+    if (bad) txt += 'Elasticity dropped noticeably: more time on the ground, more vertical movement per foot of travel, less time in the air. Plyometrics, hill repeats and tire pulls build the stiffness and strength endurance to hold form late; also check whether the fade is simply pacing.';
+    else if (mild) txt += 'A small loss of spring late in the run, which is normal under race fatigue. Worth tracking across the season to see if it tightens up.';
+    else txt += 'Spring and ground mechanics held steady. The athlete is running efficiently through fatigue.';
+    notes.push({ cls: bad ? 'alert' : mild ? 'warn' : 'good', html: txt });
+  }
+
+  // Power
+  if (powP !== null) {
+    let txt = `<strong>Power.</strong> Average power changed ${fmtPct(powP)} (${n(first.pow,0)} → ${n(last.pow,0)} W) while pace changed ${fmtPct(paceP)}. `;
+    if (first.re && last.re) { const reP = pct(last.re, first.re); txt += `Running effectiveness (speed ÷ W/kg) moved ${fmtPct(reP)}. ${reP < -3 ? 'Each watt bought less speed late in the run: form cost rose with fatigue.' : 'Form cost stayed stable; any slowdown was an output (power) drop rather than an efficiency drop.'}`; }
+    else if (paceP < -2 && powP < -2) txt += 'Both power and pace fell together: the athlete produced less, rather than becoming less efficient.';
+    else if (paceP < -2 && Math.abs(powP) <= 2) txt += 'Pace fell at the same power: efficiency dropped (form cost went up). Add athlete weight to quantify running effectiveness.';
+    notes.push({ cls:'good', html: txt });
+  }
+
+  el.innerHTML = notes.map(nn => `<div class="info-callout ${nn.cls}">${nn.html}</div>`).join('') + `<div class="help-text" style="margin-top:0.4rem;">Interpretations are coaching rules of thumb, not diagnoses. Read them alongside the course profile, conditions and the athlete's history. ● marks a measured stride length entered directly or read from the file.</div>`;
+}
+
+// ═══════════════ INIT ═══════════════
+loadExample();
+analyze();
+</script>
+</body>
+</html>
