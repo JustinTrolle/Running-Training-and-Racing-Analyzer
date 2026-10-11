@@ -422,6 +422,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-wit
         </div>
         <div class="status-line" id="fit-status">No file loaded.</div>
         <div class="fit-summary" id="fit-summary" style="display:none;"></div>
+        <div class="form-group" id="fit-session-wrap" style="display:none; margin-top:1rem;">
+          <label>Session to Analyze (multisport file)</label>
+          <select id="fit-session" onchange="onSessionChange()"></select>
+          <span class="help-text">This file contains more than one sport. The run session is selected automatically; the swim, bike and transitions are left out. Trim times apply within the chosen session.</span>
+        </div>
         <div class="form-grid" style="margin-top:1rem;">
           <div class="form-group">
             <label>Display Distance Unit</label>
@@ -956,7 +961,7 @@ function parseFit(buffer) {
     } else if (g === 19) { // lap
       laps.push({ start: msg[2], end: msg[253], dist: msg[9] !== undefined ? msg[9]/100 : undefined, timer: msg[8] !== undefined ? msg[8]/1000 : undefined });
     } else if (g === 18) { // session
-      sessions.push({ dist: msg[9] !== undefined ? msg[9]/100 : undefined, timer: msg[8] !== undefined ? msg[8]/1000 : undefined, elapsed: msg[7] !== undefined ? msg[7]/1000 : undefined, sport: msg[5] });
+      sessions.push({ start: msg[2], end: msg[253], dist: msg[9] !== undefined ? msg[9]/100 : undefined, timer: msg[8] !== undefined ? msg[8]/1000 : undefined, elapsed: msg[7] !== undefined ? msg[7]/1000 : undefined, sport: msg[5] });
     }
   }
   // post-process: ensure monotonic distance; fill distance from speed if missing
@@ -966,16 +971,35 @@ function parseFit(buffer) {
   }
   recs.sort((a,b)=>a.t-b.t);
   if (!recs.length) throw new Error('No distance records found in this file.');
+  // sessions: multisport files carry one session per sport (1 = run, 2 = bike, 5 = swim, 3 = transition)
+  const sess = sessions.filter(x => x.start !== undefined).map((x, i) => {
+    // Some exporters (TrainingPeaks, for one) rewrite every session's timestamp, so trust start + elapsed first
+    const end = (x.elapsed !== undefined && x.elapsed > 0) ? x.start + x.elapsed : (x.end !== undefined && x.end > x.start ? x.end : undefined);
+    return { idx: i, sport: x.sport, start: x.start, end, dist: x.dist, timer: x.timer, elapsed: x.elapsed };
+  }).filter(x => x.end !== undefined && x.end > x.start);
+  return { allRecords: recs, allLaps: laps, sessions: sess };
+}
+const SPORT_NAMES = { 0:'Generic', 1:'Run', 2:'Bike', 3:'Transition', 4:'Fitness equipment', 5:'Swim', 11:'Walk', 17:'Hike', 254:'Multisport' };
+function sportName(code) { return SPORT_NAMES[code] || ('Sport ' + code); }
+// Build the working dataset from the parsed file, limited to one session (or the whole file when sessionIdx is null)
+function buildFitDataset(parsed, sessionIdx) {
+  let recs = parsed.allRecords, laps = parsed.allLaps, session = null;
+  if (sessionIdx !== null && parsed.sessions[sessionIdx]) {
+    session = parsed.sessions[sessionIdx];
+    recs = recs.filter(r => r.t >= session.start && r.t <= session.end);
+    laps = laps.filter(l => l.start !== undefined && l.start >= session.start - 1 && l.start < session.end);
+    if (recs.length < 2) throw new Error('That session has no usable records.');
+  }
+  recs = recs.map(r => ({ ...r }));
   const d0 = recs[0].d;
   recs.forEach(r => r.d -= d0);
   const totalDist = recs[recs.length-1].d;
-  // lap distance bounds
   const lapBounds = [];
   let cursor = 0;
   laps.forEach(l => { if (l.dist && l.dist > 0) { lapBounds.push({ startDist: cursor, endDist: cursor + l.dist }); cursor += l.dist; } });
   const has = k => recs.some(r => r[k] !== undefined);
-  return { records: recs, laps: lapBounds, totalDist, totalTime: recs[recs.length-1].t - recs[0].t,
-    sessions, hasFields: { hr: has('hr'), cad: has('cad'), pow: has('pow'), gct: has('gct'), vo: has('vo'), sl: has('sl'), vor: has('vor'), alt: has('alt') } };
+  return { records: recs, laps: lapBounds, totalDist, totalTime: recs[recs.length-1].t - recs[0].t, session,
+    sessions: parsed.sessions, hasFields: { hr: has('hr'), cad: has('cad'), pow: has('pow'), gct: has('gct'), vo: has('vo'), sl: has('sl'), vor: has('vor'), alt: has('alt') } };
 }
 
 function handleFitFiles(files) {
@@ -986,15 +1010,52 @@ function handleFitFiles(files) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      fit = parseFit(e.target.result);
+      fitParsed = parseFit(e.target.result);
+      fitName = f.name;
+      // Multisport: default to the run session. Single-sport: use the whole file.
+      let idx = null;
+      if (fitParsed.sessions.length > 1) { const run = fitParsed.sessions.findIndex(x => x.sport === 1); idx = run >= 0 ? run : fitParsed.sessions.length - 1; }
+      buildSessionPicker(fitParsed, idx);
+      applyFitSession(idx);
+    } catch (err) {
+      fit = null; fitParsed = null; status.className = 'status-line err'; status.textContent = 'Could not read this file: ' + err.message;
+      document.getElementById('fit-summary').style.display = 'none';
+      document.getElementById('fit-session-wrap').style.display = 'none';
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+let fitParsed = null, fitName = '';
+function buildSessionPicker(parsed, idx) {
+  const wrap = document.getElementById('fit-session-wrap');
+  const sel = document.getElementById('fit-session');
+  if (parsed.sessions.length <= 1) { wrap.style.display = 'none'; sel.innerHTML = ''; return; }
+  const u = document.getElementById('fit-dist-unit').value;
+  sel.innerHTML = parsed.sessions.map((x, i) => `<option value="${i}" ${i===idx?'selected':''}>${i+1}. ${sportName(x.sport)} · ${x.dist !== undefined ? n(fromMeters(x.dist,u),2)+' '+u : '?'} · ${x.timer !== undefined ? fmtTime(x.timer) : (x.elapsed !== undefined ? fmtTime(x.elapsed) : '')}</option>`).join('') + `<option value="all" ${idx===null?'selected':''}>Whole file (all sessions)</option>`;
+  wrap.style.display = '';
+}
+function onSessionChange() {
+  const v = document.getElementById('fit-session').value;
+  try { applyFitSession(v === 'all' ? null : parseInt(v)); }
+  catch (err) { const st = document.getElementById('fit-status'); st.className = 'status-line err'; st.textContent = err.message; }
+}
+function applyFitSession(idx) {
+  const status = document.getElementById('fit-status');
+  status.className = 'status-line';
+  {
+    {
+      fit = buildFitDataset(fitParsed, idx);
       const u = document.getElementById('fit-dist-unit').value;
-      status.textContent = `Loaded ${f.name}: ${fit.records.length.toLocaleString()} records, ${fit.laps.length} laps.`;
+      const multi = fitParsed.sessions.length > 1;
+      const sessNote = multi ? (fit.session ? ` Multisport file: showing the ${sportName(fit.session.sport)} session only (${fitParsed.sessions.length} sessions found).` : ` Multisport file: showing all ${fitParsed.sessions.length} sessions together.`) : '';
+      status.textContent = `Loaded ${fitName}: ${fit.records.length.toLocaleString()} records, ${fit.laps.length} laps.${sessNote}`;
       const hf = fit.hasFields;
       const avail = ['Pace', hf.hr&&'HR', hf.cad&&'Cadence', hf.pow&&'Power', hf.gct&&'GCT', hf.vo&&'Vert. Osc.', hf.sl&&'Stride Length'].filter(Boolean).join(', ');
       document.getElementById('fit-summary').style.display = 'grid';
       document.getElementById('fit-summary').innerHTML = `
         <div class="fit-pill">Distance<b>${n(fromMeters(fit.totalDist,u),2)} ${u}</b></div>
         <div class="fit-pill">Elapsed Time<b>${fmtTime(fit.totalTime)}</b></div>
+        ${fit.session && fit.session.timer ? `<div class="fit-pill">Moving Time<b>${fmtTime(fit.session.timer)}</b></div>` : ''}
         <div class="fit-pill">Avg Pace<b>${fmtPaceSec(fit.totalTime / fromMeters(fit.totalDist,u))} /${u}</b></div>
         <div class="fit-pill">Laps in File<b>${fit.laps.length}</b></div>
         <div class="fit-pill" style="grid-column: 1 / -1;">Metrics found<b style="font-size:0.9rem;">${avail}</b></div>`;
@@ -1004,13 +1065,10 @@ function handleFitFiles(files) {
       if (hf.vo && hf.cad) forceMetric('vor');
       if (hf.gct && hf.cad) forceMetric('flight');
       document.getElementById('scheme-laps').disabled = !(fit.laps.length > 1);
+      if (scheme === 'laps' && fit.laps.length <= 1) selectScheme('quarters', document.querySelector('[data-scheme="quarters"]'));
       buildSegmentInputs();
-    } catch (err) {
-      fit = null; status.className = 'status-line err'; status.textContent = 'Could not read this file: ' + err.message;
-      document.getElementById('fit-summary').style.display = 'none';
     }
-  };
-  reader.readAsArrayBuffer(f);
+  }
 }
 // drag & drop
 (function(){ const dz = document.getElementById('drop-zone');
